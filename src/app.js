@@ -3,7 +3,6 @@
 // and listens on a port. Start the application by running
 // 'node app.js' in your terminal
 
-
 var express = require('express'),
 	app = express();
 
