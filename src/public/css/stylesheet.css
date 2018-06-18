@@ -599,3 +599,26 @@ footer {
 .offline {
 	color: #d6441b;
 }
+
+/* ------------ Connection styles ------------ */
+
+#connected {
+	background-image: url(../img/connected.png);
+}
+
+#disconnected {
+	background-image: url(../img/disconnect.png);
+}
+
+#connecting {
+	background-image: url(../img/connecting.gif);
+}
+
+.connection-img {
+	background-repeat: no-repeat !important;
+	height: 32px;
+	width: 32px;
+	background-size: contain !important;
+	margin-top: 0;
+	margin-bottom: 0;
+}

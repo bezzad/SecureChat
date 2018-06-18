@@ -46,12 +46,14 @@
 					<a href="#roomsmenu" data-toggle="collapse" aria-expanded="true">Rooms</a>
 					<ul class="collapse list-unstyled" id="roomsmenu">
 					</ul>
-				</li>				
+				</li>
 			</ul>
 
 			<ul class="list-unstyled CTAs">
-					<li><a href="#" class="create-room">Create Room</a></li>
-				</ul>
+				<li>
+					<a href="#" class="create-room">Create Room</a>
+				</li>
+			</ul>
 		</nav>
 
 		<!-- Page Content Holder -->
@@ -59,12 +61,16 @@
 
 			<nav class="navbar navbar-default banner">
 				<div class="container-fluid">
-
 					<div class="navbar-header">
 						<button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
 							<i class="glyphicon glyphicon-align-left"></i>
 							<span>Menu</span>
 						</button>
+						<div class="navbar-brand">
+							<div id="connected" class="connection-img" style="display: none;" title="connected to server strongly"></div>
+							<div id="disconnected" class="connection-img" style="display: none;" title="server not found"></div>
+							<div id="connecting" class="connection-img" title="trying to connect server..."></div>
+						</div>
 					</div>
 
 					<div class="collapse navbar-collapse">

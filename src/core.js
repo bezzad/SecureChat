@@ -53,7 +53,7 @@ module.exports = function (app, io) {
                 console.log("User " + user.username + " can't login, because that password is incorrect!");
             }
 
-            function userConnected(user){
+            function userConnected(user) {
                 user.status = "online";
                 user.socketid = socket.id;
                 socket.emit("signedin", user); // send success ack to user by self data object
@@ -62,42 +62,38 @@ module.exports = function (app, io) {
                 //
                 // tell new user added and list updated to everyone except the socket that starts it
                 chat.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRoomsName() });
+
+
+                // Somebody left the chat
+                socket.on('disconnect', function () {
+                    // find user who abandon sockets
+                    var user = manager.findUser(socket.id);
+                    if (user !== null) {
+                        user.status = manager.status[0]; // offline
+                        console.log("User " + user.username + " disconnected!");
+
+                        // Notify the other person in the chat room
+                        // that his partner has left
+                        socket.broadcast.to(globalRoom).emit('leave',
+                            { username: user.username, id: user.id, avatar: user.avatar, status: user.status });
+
+                        // leave the joined rooms
+                        socket.leave(globalRoom);
+                        socket.leave(socket.rooms);
+                    }
+                });
+
+                // Handle the sending of messages
+                socket.on('msg', (data) => {
+                    // When the server receives a message, it sends it to the other person in the room.
+                    socket.broadcast.to(socket.room).emit('receive', { msg: data.msg, user: data.user, img: data.img });
+                });
+
+                //listen on typing
+                socket.on("typing", (data) => {
+                    socket.broadcast.emit("typing", { username: socket.username });
+                })
             }
-            //     chat.in('channelName').clients((error, clients) => {
-            //         if (error) throw error;
-            //          }
-
-
-            // Somebody left the chat
-            socket.on('disconnect', function () {
-                // find user who abandon sockets
-                var user = manager.findUser(socket.id);
-                if (user !== null) {
-                    user.status = manager.status[0]; // offline
-                    console.log("User " + user.username + " disconnected!");
-
-                    // Notify the other person in the chat room
-                    // that his partner has left
-                    socket.broadcast.to(globalRoom).emit('leave', 
-                        { username: user.username, id: user.id, avatar: user.avatar, status: user.status });
-
-                    // leave the joined rooms
-                    socket.leave(globalRoom);
-                    socket.leave(socket.rooms);
-                }
-            });
-
-
-            // Handle the sending of messages
-            socket.on('msg', (data) => {
-                // When the server receives a message, it sends it to the other person in the room.
-                socket.broadcast.to(socket.room).emit('receive', { msg: data.msg, user: data.user, img: data.img });
-            });
-
-            //listen on typing
-            socket.on("typing", (data) => {
-                socket.broadcast.emit("typing", { username: socket.username });
-            })
         });
     });
 }

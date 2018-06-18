@@ -1,74 +1,37 @@
-// This file is executed in the browser, when people visit /chat/<random id>
+// This file is executed in the browser, when people visit /chat
 
 $(function () {
-
 	// connect to the socket
 	var socket = io();
 
 	// variables which hold the data for each person
-	var name = "",
-		email = "",
-		pass = "",
-		me = NaN,
-		lstUsers = NaN,
-		lstRooms = NaN,
+	var me = null,
+		lstUsers = null,
+		lstRooms = null,
 		fadeInterval = 800,
 		status = ["offline", "online"]; // 0: offline, 1: online
 
-	// cache some jQuery objects
-	var section = $(".section"),
-		footer = $("footer"),
-		onConnect = $(".connected"),
-		inviteSomebody = $(".invite-textfield"),
-		chatScreen = $(".chatscreen"),
-		left = $(".left"),
-		noMessages = $(".nomessages"),
-		selectChatMessage = $(".selectChatMessage");
-
-	// some more jquery objects
-	var chatNickname = $(".nickname-chat"),
-		leftNickname = $(".nickname-left"),
-		loginForm = $(".loginForm"),
-		yourName = $("#yourName"),
-		yourEmail = $("#yourEmail"),
-		yourPass = $("#yourPass"),
-		hisName = $("#hisName"),
-		hisEmail = $("#hisEmail"),
-		chatForm = $("#chatform"),
-		textarea = $("#message"),
-		messageTimeSent = $(".timesent"),
-		chats = $(".chats"),
-		users = $("#usersmenu"),
-		rooms = $("#roomsmenu");
-
-
-	// these variables hold images
-	var ownerImage = $("#ownerImage"),
-		leftImage = $("#leftImage"),
-		noMessagesImage = $("#noMessagesImage");
-
-
 	// on connection to server get the id of person's room
-	socket.on('connect', function () {
+	socket.on("connect", () => {
 		showMessage("connected");
-
-		loginForm.on('submit', function (e) {
+		setConnectionStatus("connected");
+		$(".loginForm").on('submit', function (e) {
 
 			e.preventDefault();
 
-			name = $.trim(yourName.val());
+			var name = $.trim($("#yourName").val());
 			if (name.length < 1) {
 				alert("Please enter a nick name longer than 1 character!");
 				return;
 			}
 
-			email = yourEmail.val();
+			var email = $("#yourEmail").val();
 			if (!isValid(email)) {
 				alert("Wrong e-mail format!");
 				return;
 			}
 
-			pass = yourPass.val();
+			var pass = $("#yourPass").val();
 			if (pass.length < 2) {
 				alert("Please enter your passwrod longer than 2 character!");
 				return;
@@ -77,6 +40,11 @@ $(function () {
 			socket.emit('login', { username: name, email: email, password: pass, pubKey: "testPubKey" });
 		});
 	});
+
+	socket.on("disconnect", () => {
+		setConnectionStatus("connecting");
+	});
+
 
 	socket.on("exception", (err) => {
 		alert(err);
@@ -94,16 +62,16 @@ $(function () {
 	socket.on('update', (data) => {
 		lstUsers = data.users.filter(function (u) { return u.id !== me.id; });
 		lstRooms = data.rooms;
-		users.empty();
-		rooms.empty();
+		$("#usersmenu").empty();
+		$("#roomsmenu").empty();
 
 		lstUsers.forEach(user => {
-			users.append("<li id='userid_" + user.id + "'>" + getUserLink(user) + "</li>")
+			$("#usersmenu").append("<li id='userid_" + user.id + "'>" + getUserLink(user) + "</li>")
 		});
 		$("#usersmenu").collapse('show');
 
 		lstRooms.forEach(room => {
-			rooms.append("<li id='roomname_" + room.roomName + "'>" + room.roomName + "</li>")
+			$("#roomsmenu").append("<li id='roomname_" + room.roomName + "'>" + room.roomName + "</li>")
 		});
 		$("#roomsmenu").collapse('show');
 
@@ -125,15 +93,22 @@ $(function () {
 	});
 
 
-	// Other useful 
+	
+
+
+
+
+
+
+
 
 	socket.on('startChat', function (data) {
 		console.log(data);
 		if (data.boolean && data.id == id) {
 
-			chats.empty();
+			$(".chats").empty();
 
-			if (name === data.users[0]) {
+			if (me.username === data.users[0]) {
 
 				showMessage("youStartedChatWithNoMessages", data);
 			}
@@ -142,7 +117,7 @@ $(function () {
 				showMessage("heStartedChatWithNoMessages", data);
 			}
 
-			chatNickname.text(friend);
+			$(".nickname-chat").text(friend);
 		}
 	});
 
@@ -157,50 +132,77 @@ $(function () {
 		}
 	});
 
-	chatForm.on('submit', function (e) {
+	$("#chatform").on('submit', function (e) {
 
 		e.preventDefault();
 
 		// Create a new chat message and display it directly
 		showMessage("chatStarted");
 
-		if (textarea.val().trim().length) {
-			createChatMessage(textarea.val(), name, img, moment());
+		if ($("#message").val().trim().length) {
+			createChatMessage($("#message").val(), me.username, img, moment());
 			scrollToBottom();
 
 			// Send the message to the other person in the chat
-			socket.emit('msg', { msg: textarea.val(), user: name, img: img });
+			socket.emit('msg', { msg: $("#message").val(), user: me.username, img: me.avatar });
 
 		}
 		// Empty the textarea
-		textarea.val("");
+		$("#message").val("");
 	});
 
 
-	textarea.keypress(function (e) {
+	$("#message").keypress(function (e) {
 		// Submit the form on enter
 		if (e.which == 13) {
 			e.preventDefault();
-			chatForm.trigger('submit');
+			$("#chatform").trigger('submit');
 		}
 	});
+
+
+
+
+
+
+
+
+
+
 
 	// Update the relative time stamps on the chat messages every minute
 	setInterval(function () {
 
-		messageTimeSent.each(function () {
+		$(".timesent").each(function () {
 			var each = moment($(this).data('time'));
 			$(this).text(each.fromNow());
 		});
 
 	}, 60000);
 
+	function setConnectionStatus(state) {
+		if (state === "connected") {
+			$("#connected").fadeIn();
+			$("#disconnected").css("display", "none");
+			$("#connecting").css("display", "none");
+		}
+		else if (state === "disconnected") {
+			$("#connected").css("display", "none");
+			$("#disconnected").fadeIn();
+			$("#connecting").css("display", "none");
+		}
+		else if (state === "connecting") {
+			$("#connected").css("display", "none");
+			$("#disconnected").css("display", "none");
+			$("#connecting").fadeIn();
+		}
+	}
+
 	// Function that creates a new chat message
 	function createChatMessage(msg, user, imgg, now) {
-
 		var who = '';
 
-		if (user === name) {
+		if (user === me.username) {
 			who = 'me';
 		}
 		else {
@@ -221,10 +223,9 @@ $(function () {
 		li.find('p').text(msg);
 		li.find('b').text(user);
 
-		chats.append(li);
+		$(".chats").append(li);
 
-		messageTimeSent = $(".timesent");
-		messageTimeSent.last().text(now.fromNow());
+		$(".timesent").last().text(now.fromNow());
 	}
 
 	function scrollToBottom() {
@@ -241,53 +242,53 @@ $(function () {
 
 		if (status === "connected") {
 
-			section.children().css('display', 'none');
-			onConnect.fadeIn(fadeInterval);
+			$(".section").children().css('display', 'none');
+			$(".connected").fadeIn(fadeInterval);
 		}
 
 		else if (status === "signedin") {
-			onConnect.css("display", "none");
-			selectChatMessage.fadeIn(fadeInterval);
+			$(".connected").css("display", "none");
+			$(".selectChatMessage").fadeIn(fadeInterval);
 		}
 
 		else if (status === "youStartedChatWithNoMessages") {
 
-			left.fadeOut(fadeInterval, function () {
-				inviteSomebody.fadeOut(fadeInterval, function () {
-					noMessages.fadeIn(fadeInterval);
-					footer.fadeIn(fadeInterval);
+			$(".left").fadeOut(fadeInterval, function () {
+				$(".invite-textfield").fadeOut(fadeInterval, function () {
+					$(".nomessages").fadeIn(fadeInterval);
+					$("footer").fadeIn(fadeInterval);
 				});
 			});
 
 			friend = data.users[1];
-			noMessagesImage.attr("src", data.avatars[1]);
+			$("#noMessagesImage").attr("src", data.avatars[1]);
 		}
 
 		else if (status === "heStartedChatWithNoMessages") {
 
 			personInside.fadeOut(fadeInterval, function () {
-				noMessages.fadeIn(fadeInterval);
-				footer.fadeIn(fadeInterval);
+				$(".nomessages").fadeIn(fadeInterval);
+				$("footer").fadeIn(fadeInterval);
 			});
 
 			friend = data.users[0];
-			noMessagesImage.attr("src", data.avatars[0]);
+			$("#noMessagesImage").attr("src", data.avatars[0]);
 		}
 
 		else if (status === "chatStarted") {
 
-			section.children().css('display', 'none');
-			chatScreen.css('display', 'block');
+			$(".section").children().css('display', 'none');
+			$(".chatscreen").css('display', 'block');
 		}
 
 		else if (status === "somebodyLeft") {
 
-			leftImage.attr("src", data.avatar);
-			leftNickname.text(data.user);
+			$("#leftImage").attr("src", data.avatar);
+			$(".nickname-left").text(data.user);
 
-			section.children().css('display', 'none');
-			footer.css('display', 'none');
-			left.fadeIn(fadeInterval);
+			$(".section").children().css('display', 'none');
+			$("footer").css('display', 'none');
+			$(".left").fadeIn(fadeInterval);
 		}
 	}
 
