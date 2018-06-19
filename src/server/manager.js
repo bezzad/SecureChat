@@ -1,7 +1,7 @@
 var clients = new Map(), // [ { socketid, id, username, email, pubKey, password, avatar, status }]
     messageTypes = ["ack", "request", "message", "symmetricKey"],
     messages = new Map(), // [ { id, date, sender, receiver, type }, ... ]
-    rooms = new Map(), // [ { roomName, p2p, adminUserId, users[] }, ... ]
+    rooms = new Map(), // [ { key: roomName, value: { name, p2p, adminUserId, users[] } }, ... ]
     status = ["offline", "online"]; // 0: offline, 1: online
 
 module.exports = {
@@ -19,7 +19,7 @@ module.exports = {
 
     getHashCode: String.prototype.hashCode = function () {
         var hash = 0, i, chr;
-        if (this.length === 0) return hash;
+        if (this.length == 0) return hash;
         for (i = 0; i < this.length; i++) {
             chr = this.charCodeAt(i);
             hash = ((hash << 5) - hash) + chr;
@@ -29,41 +29,39 @@ module.exports = {
     },
 
     getUsers: function () {
-        var users = [];
-        clients.forEach(u => {
-            users.push({
+        var users = {};
+        for ([key, u] of clients) {
+            users[key] = {
                 id: u.id,
                 email: u.email,
                 username: u.username,
                 avatar: u.avatar,
                 status: u.status
-            })
-        });
-
+            };
+        }
         return users;
     },
 
     getUserRooms: function (userId) {
-        var userRooms = [];
+        var userRooms = {};
         if (userId) {
-            rooms.forEach(r => {
+            for ([key, r] of rooms) {
                 var index = r.users.indexOf(userId);
                 if (index !== -1 && r.p2p === false) {
-                    userRooms.push(r);
+                    userRooms[key] = r;
                 }
-            })
+            }
         }
-
         return userRooms;
     },
 
     getRoomsName: function () {
-        var lstRooms = [];
-        rooms.forEach(r => {
+        var lstRooms = {};
+        for ([key, r] of rooms) {
             if (r.p2p === false) {
-                lstRooms.push(r.roomName);
+                lstRooms[key] = r.roomName;
             }
-        })
+        }
         return lstRooms;
     },
 
@@ -74,5 +72,35 @@ module.exports = {
             }
         }
         return null; // user not found
+    },
+
+    generateChatRoomName: function (uid0, uid1) {
+        var ids = [uid0, uid1].sort();
+        return ids[0] + "|" + ids[1]; // unique name for this users private 
+    },
+
+    getAdminFromChatName: function (chatName, userid) {
+
+        var admin = null;
+
+        // find room to send client request
+        var room = rooms.get(chatName);
+
+        if (room == null) { // requested to new p2p chat
+            var halfIndex = chatName.indexOf("|");
+            if (halfIndex < 1)
+                return null; // p2p chat name incorrect
+
+            var u0 = chatName.substring(0, halfIndex);
+            var u1 = chatName.substring(halfIndex + 1);
+
+            admin = (u0 === userid)
+                ? clients.get(u1) // u1 is admin id
+                : admin = clients.get(u0);  // u0 is admin id
+        }
+        else
+            admin = clients.get(room.adminUserId);
+
+        return admin;
     }
 }
