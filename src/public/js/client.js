@@ -126,31 +126,36 @@ socket.on('request', (data) => {
 		var symmetricKey = "symmetricKeyForThisRoom";
 		//
 		// store this room to my rooms list
-		addMyRoom(data.room, { room: data.room, p2p: true, semmetric: symmetricKey });
+		addMyRoom(data.room, { room: data.room, p2p: true, chatKey: symmetricKey });
 	}
 	// and encrypt that by requester public key
 	var encSymmetricKey = myRoomData[data.room] + data.pubKey + "EncryptedByAnotherUserPubKey";
 	//
 	// send data to requester user to join in current room
-	socket.emit("accept", { to: data.from, semmetricKey: encSymmetricKey, room: data.room })
+	socket.emit("accept", { to: data.from, chatKey: encSymmetricKey, room: data.room })
 	showMessage("chatStarted", data);
 });
 
 socket.on('accept', (data) => {
 	var admin = lstUsers[data.from];
-	var symmetricKey = data.symmetric + "decryptByMyPrivateKey";
+	var symmetricKey = data.chatKey + "decryptByMyPrivateKey";
 	//
 	// store this room to my rooms list
-	addMyRoom(data.room, { room: data.room, p2p: data.p2p, semmetric: symmetricKey });
+	addMyRoom(data.room, { room: data.room, p2p: data.p2p, chatKey: symmetricKey });
 	showMessage("chatStarted", data);
+	document.getElementById(data.room).style.display = "none"; // jquery exception in "|"
+
 });
 
 socket.on('reject', (data) => {
 	var admin = lstUsers[data.from];
+	var reason = data.msg == null ? "" : data.msg;
 	if (data.p2p)
-		alert("The user <" + admin.username + "> rejected your chat request!");
+		alert("The user <" + admin.username + "> rejected your chat request. " + reason);
 	else
-		alert("The user <" + admin.username + "> as admin of <" + data.room + ">, rejected your chat request!");
+		alert("The user <" + admin.username + "> as admin of <" + data.room + ">, rejected your chat request. " + reason);
+
+	document.getElementById(data.room).style.display = "none"; // jquery exception in "|"
 });
 
 socket.on('startChat', function (data) {
@@ -215,13 +220,28 @@ $("#message").keypress(function (e) {
 
 
 function reqChatBy(chat) {
-	socket.emit("request", { room: chat })
+	document.getElementById(chat).style.display = "block"; // jquery exception in "|"
+	var roomKey = myRoomData[chat];
+	if (roomKey == null) {
+		socket.emit("request", { room: chat });
+	}
+	else { // me already joined in chat
+		document.getElementById(chat).style.display = "none"; // jquery exception in "|"
+		showMessage("chatStarted", chat);
+	}
 }
 
 
 function getUserLink(user) {
-	return "<a href='javascript:reqChatBy(\"" + generateChatRoomName(user.id) + "\");'><img src='" + user.avatar + "' height='32' width='32' style='border-radius: 50%;'>&nbsp;" +
-		"<img src='img/" + user.status + "_status.png' height='16' width='16'>" + user.username + "</a>";
+	var chat = generateChatRoomName(user.id);
+	return "<a href='javascript:reqChatBy(\"" + chat + "\");'>" +
+		"<div class='user'>" +
+		"<img class='user-avatar' src='" + user.avatar + "'>" +
+		"<div class='wait' id='" + chat + "'></div>" +
+		"<div style='margin-top: 12px'>&nbsp;" +
+		"<img src='img/" + user.status + "_status.png' height='16' width='16'>" + user.username +
+		"</div>" +
+		"</div></a>";
 }
 
 

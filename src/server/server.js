@@ -23,13 +23,13 @@ module.exports = function (app, io) {
     // Initialize a new socket.io application, named 'chat'
     var chat = io.on('connection', function (socket) {
 
-        console.log("socket " + connCount++ + "th connected by id: " + socket.id);
+        console.info("socket " + connCount++ + "th connected by id: " + socket.id);
 
         // When the client emits 'login', save his name and avatar,
         // and add them to the room
         socket.on('login', function (data) {
 
-            var user = manager.clients.get(data.email.hashCode());
+            var user = manager.clients[data.email.hashCode()];
             if (user == null) {  // new user
                 // Use the socket object to store data. Each client gets
                 // their own unique socket object
@@ -43,7 +43,7 @@ module.exports = function (app, io) {
                     "avatar": gravatar.url(data.email, { s: '140', r: 'x', d: 'mm' }), // user avatar picture's
                     "status": "online" // { "online", "offline" }
                 };
-                manager.clients.set(data.email.hashCode(), user);
+                manager.clients[user.id] = user;
                 userSigned(user);
             }
             else if (user.password === data.password) { // exist user, check login password
@@ -51,7 +51,7 @@ module.exports = function (app, io) {
             }
             else { // exist user, entry password is incorrect
                 socket.emit("exception", "The username is already exist, but your password is incorrect!");
-                console.log("User " + user.username + " can't login, because that password is incorrect!");
+                console.info("User " + user.username + " can't login, because that password is incorrect!");
             }
 
         }); // login
@@ -64,7 +64,7 @@ module.exports = function (app, io) {
             socket.emit("signed", user);
 
             socket.join(globalRoom);
-            console.log("User " + user.username + " connected")
+            console.info("User " + user.username + " connected")
             //
             // tell new user added and list updated to everyone except the socket that starts it
             chat.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRoomsName() });
@@ -75,7 +75,7 @@ module.exports = function (app, io) {
                 var user = manager.findUser(socket.id);
                 if (user !== null) {
                     user.status = manager.status[0]; // offline
-                    console.log("User " + user.username + " disconnected!");
+                    console.info("User " + user.username + " disconnected!");
 
                     // Notify the other person in the chat room
                     // that his partner has left
@@ -112,7 +112,12 @@ module.exports = function (app, io) {
                     var adminUser = manager.getAdminFromChatName(data.room, from.id)
 
                     if (adminUser != null) {
-                        socket.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
+                        if (adminUser.status == manager.status[0]) { // offline admin   
+                            var p2p = manager.rooms[data.room] == null ? true : manager.rooms[data.room].p2p;
+                            socket.emit("reject", { from: adminUser.id, room: data.room, p2p: p2p, msg: "admin user is offline" });
+                        }
+                        else
+                            socket.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
                         return;
                     }
                 }
@@ -128,23 +133,23 @@ module.exports = function (app, io) {
                 var from = manager.findUser(socket.id);
 
                 // find user who is target user by user id
-                var to = manager.clients.get(data.to);
+                var to = manager.clients[data.to];
 
                 // if users authenticated 
                 if (from != null && to != null) {
-                    var room = manager.rooms.get(data.room);
+                    var room = manager.rooms[data.room];
                     if (room == null) { // new p2p room
                         room = { name: data.room, p2p: true, adminUserId: from.id, users: [] };
-                        manager.rooms.set(data.room, room);
-                        socket.sockets.to(from.socketid).join(data.room); // add admin to self chat room
+                        manager.rooms[data.room] = room;
+                        socket.to(from.socketid).join(data.room); // add admin to self chat room
                     }
                     //
                     // add new user to this room
                     room.users.push(to.id);
-                    socket.sockets.to(to.socketid).join(room.name); // add new user to chat room
+                    socket.to(to.socketid).join(room.name); // add new user to chat room
 
                     // send accept msg to user which requested to chat
-                    socket.to(to.socketid).emit("accept", { from: from.id, room: room.name, semmetric: data.semmetric })
+                    socket.to(to.socketid).emit("accept", { from: from.id, room: room.name, p2p: room.p2p, chatKey: data.chatKey })
                 }
             });
 
@@ -155,11 +160,11 @@ module.exports = function (app, io) {
                 var from = manager.findUser(socket.id);
 
                 // find user who is target user by user id
-                var to = manager.clients.get(data.to);
+                var to = manager.clients[data.to];
 
                 // if users authenticated 
                 if (from != null && to != null) {
-                    var room = manager.rooms.get(data.room);
+                    var room = manager.rooms[data.room];
                     socket.to(to.socketid).emit("reject", { from: from.id, p2p: (room == null), room: data.room })
                 }
             });
