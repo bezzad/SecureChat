@@ -27,7 +27,7 @@ a, a:hover, a:focus {
     padding: 15px 10px;
     background: #fff;
     border: none;
-    border-radius: 0;
+    border-radius: 5px;
     margin-bottom: 40px;
     box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -61,7 +61,7 @@ a, a:hover, a:focus {
 }
 
 #sidebar.active {
-    margin-left: -250px;
+    margin-left: -270px;
 }
 
 #sidebar .sidebar-header {
@@ -144,7 +144,7 @@ a.article, a.article:hover {
     CONTENT STYLE
 ----------------------------------------------------- */
 #content {
-    width: calc(100% - 250px);
+    width: calc(100% - 270px);
     padding: 40px;
     min-height: 100vh;
     transition: all 0.3s;
@@ -171,7 +171,7 @@ ul img {
 ----------------------------------------------------- */
 @media (max-width: 768px) {
     #sidebar {
-        margin-left: -250px;
+        margin-left: -270px;
     }
     #sidebar.active {
         margin-left: 0;
@@ -180,7 +180,7 @@ ul img {
         width: 100%;
     }
     #content.active {
-        width: calc(100% - 250px);
+        width: calc(100% - 270px);
     }
     #sidebarCollapse span {
         display: none;

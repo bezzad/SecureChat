@@ -17,8 +17,6 @@ a {
 	text-decoration: none;
 }
 
-/* ------------ Header styles ------------ */
-
 /* ------ Home ------ */
 
 .homebanner {
@@ -67,8 +65,6 @@ a {
 .bannertext span {
 	color: #d6441b;
 }
-
-/* ------------ Section styles ------------ */
 
 /* ------ Home ------ */
 
@@ -513,39 +509,27 @@ form.loginForm input {
 footer {
 	position: fixed;
 	bottom: 0;
-	left: 0;
+	right: 0;
+	display: block;
+    margin-left: auto;
+    margin-right: auto;
+	z-index: 1020;
 	width: 100%;
-	padding-top: 30px;
-	background-color: white;
-	height: 130px;
-}
-
-#chatform {
-	width: 700px;
-	margin: 0 auto;
-	background-color: white;
+	background-color: #f0f1f3;
 }
 
 #message {
-	width: 550px;
-	height: 80px;
-	display: block;
-	float: left;
-	margin: 0 auto;
-	background-color: #f9f9f9;
+	width: 100%;
+	background-color: #fff;
 	border: 1px solid #cccccc;
 	border-radius: 2px;
-	padding-left: 20px;
-	padding-top: 20px;
-	resize: none;
+	padding: 10px;
 	font: inherit;
 	color: inherit;
 }
 
 #submit {
-	width: 110px;
-	height: 60px;
-	float: right;
+	width: 100%;
 	text-align: center;
 	background-color: #73b4d4;
 	display: block;
@@ -560,31 +544,31 @@ footer {
 	cursor: pointer;
 }
 
-/* ---------------------- HIDE -------------------------- */
-
-.connected {
-	display: none;
+textarea::-webkit-input-placeholder {
+	color: #cccccc;
 }
 
+textarea:-moz-placeholder {
+	/* Firefox 18- */
+	color: #cccccc;
+}
+
+textarea::-moz-placeholder {
+	/* Firefox 19+ */
+	color: #cccccc;
+}
+
+textarea:-ms-input-placeholder {
+	color: #cccccc;
+}
+
+/* ---------------------- HIDE -------------------------- */
+
 .selectChatMessage {
-	display: none;
 	text-align: center;
 }
 
-.left {
-	display: none;
-}
-
-.nomessages {
-	display: none;
-}
-
-footer {
-	display: none;
-}
-
 .chatscreen {
-	display: none;
 	width: 700px;
 	margin: 0 auto 200px;
 	overflow: hidden;

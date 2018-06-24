@@ -25,3 +25,5 @@ Client side secure chat, based on [node.js](https://nodejs.org), [socket.io](htt
 * [**Bootstrap**](https://getbootstrap.com/) is an open source toolkit for developing with HTML, CSS, and JS.
 
 * [**Gravatar**](https://github.com/emerleite/node-gravatar) a library to generate Gravatar URLs in Node.js Based on gravatar specs - `http://en.gravatar.com/site/implement/hash/` and `http://en.gravatar.com/site/implement/images/`.
+
+* [**Tchat card**](https://bootsnipp.com/snippets/0e3Ma) a Bootstrap chat theme snippet by [evarevirus](https://bootsnipp.com/evarevirus)

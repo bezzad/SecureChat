@@ -91,7 +91,7 @@ module.exports = function (app, io) {
             // Handle the sending of messages
             socket.on('msg', (data) => {
                 // When the server receives a message, it sends it to the other person in the room.
-                socket.broadcast.to(socket.room).emit('receive', { msg: data.msg, user: data.user, img: data.img });
+                socket.broadcast.to(data.to).emit('receive', data);
             });
 
             // listen on typing
@@ -117,7 +117,7 @@ module.exports = function (app, io) {
                             socket.emit("reject", { from: adminUser.id, room: data.room, p2p: p2p, msg: "admin user is offline" });
                         }
                         else
-                            socket.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
+                            io.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
                         return;
                     }
                 }

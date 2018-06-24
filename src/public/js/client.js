@@ -1,13 +1,11 @@
 // This file is executed in the browser, when people visit /chat
 
-// connect to the socket
-var socket = io();
-
 // variables which hold the data for each person
-var me = null,
+var socket = io(), // connect to the socket
+	me = null, // keep my info, username, avatar, ...
 	lstUsers = null,
 	lstRooms = null,
-	fadeInterval = 800,
+	currentChatName = "",
 	state = ["offline", "online"], // 0: offline, 1: online
 	sh512Hasing = forge.md.sha512.create(),
 	myRoomData = localStorage.myRooms == null
@@ -52,6 +50,7 @@ socket.on("connect", () => {
 	}
 });
 
+
 socket.on("disconnect", () => {
 	setConnectionStatus("connecting");
 });
@@ -61,6 +60,7 @@ socket.on("exception", (err) => {
 	alert(err);
 });
 
+
 // save the my user data
 socket.on('signed', (data) => {
 	me = data;
@@ -69,6 +69,7 @@ socket.on('signed', (data) => {
 	$("#myUsername").html(me.username);
 	showMessage("signedin", me);
 });
+
 
 // update users and rooms data
 socket.on('update', (data) => {
@@ -92,6 +93,7 @@ socket.on('update', (data) => {
 
 });
 
+
 // when a client socket disconnected
 socket.on('leave', (leftedUser) => {
 	var u = lstUsers[leftedUser.id];
@@ -100,6 +102,7 @@ socket.on('leave', (leftedUser) => {
 		$("#userid_" + u.id).html(getUserLink(u))
 	}
 });
+
 
 // on a user join request to the chat's which me is admin of 
 socket.on('request', (data) => {
@@ -136,7 +139,9 @@ socket.on('request', (data) => {
 	showMessage("chatStarted", data);
 });
 
+
 socket.on('accept', (data) => {
+	console.log("room [" + data.room + "] is now open.");
 	var admin = lstUsers[data.from];
 	var symmetricKey = data.chatKey + "decryptByMyPrivateKey";
 	//
@@ -144,8 +149,8 @@ socket.on('accept', (data) => {
 	addMyRoom(data.room, { room: data.room, p2p: data.p2p, chatKey: symmetricKey });
 	showMessage("chatStarted", data);
 	document.getElementById(data.room).style.display = "none"; // jquery exception in "|"
-
 });
+
 
 socket.on('reject', (data) => {
 	var admin = lstUsers[data.from];
@@ -158,55 +163,35 @@ socket.on('reject', (data) => {
 	document.getElementById(data.room).style.display = "none"; // jquery exception in "|"
 });
 
-socket.on('startChat', function (data) {
-	console.log(data);
-	if (data.boolean && data.id == id) {
-
-		$(".chats").empty();
-
-		if (me.username === data.users[0]) {
-
-			showMessage("youStartedChatWithNoMessages", data);
-		}
-		else {
-
-			showMessage("heStartedChatWithNoMessages", data);
-		}
-
-		$(".nickname-chat").text(friend);
-	}
-});
-
 
 socket.on('receive', function (data) {
-
-	showMessage('chatStarted');
+	if (currentChatName = data.to) {
+		// Create a new chat message and display it directly
+		showMessage('chatStarted');
+	}
 
 	if (data.msg.trim().length) {
-		createChatMessage(data.msg, data.user, data.img, moment());
+		createChatMessage(data.msg, data.from, data.img, moment());
 		scrollToBottom();
 	}
 });
-
 
 
 $("#chatform").on('submit', function (e) {
 
 	e.preventDefault();
 
-	// Create a new chat message and display it directly
-	showMessage("chatStarted");
-
 	if ($("#message").val().trim().length) {
-		createChatMessage($("#message").val(), me.username, img, moment());
+		createChatMessage($("#message").val(), me.username, me.avatar, moment());
 		scrollToBottom();
 
 		// Send the message to the other person in the chat
-		socket.emit('msg', { msg: $("#message").val(), from: me.id, to: "channel name", img: me.avatar });
+		socket.emit('msg', { msg: $("#message").val(), from: me.id, to: currentChatName, img: me.avatar });
 
 	}
 	// Empty the textarea
 	$("#message").val("");
+	$("#message").focus();
 });
 
 
@@ -218,19 +203,36 @@ $("#message").keypress(function (e) {
 	}
 });
 
+// Update the relative time stamps on the chat messages every minute
+setInterval(function () {
+
+	$(".timesent").each(function () {
+		var each = moment($(this).data('time'));
+		$(this).text(each.fromNow());
+	});
+
+}, 60000);
+
+// Menu collapse Js Script 
+$('#sidebarCollapse').on('click', function () {
+	$('#sidebar, #content').toggleClass('active');
+	$('.collapse.in').toggleClass('in');
+	$('a[aria-expanded=true]').attr('aria-expanded', 'false');
+});
+
 
 function reqChatBy(chat) {
-	document.getElementById(chat).style.display = "block"; // jquery exception in "|"
+	currentChatName = chat;
+	document.getElementById(chat).style.backgroundColor = "#123456"; // jquery exception in "|"
 	var roomKey = myRoomData[chat];
 	if (roomKey == null) {
 		socket.emit("request", { room: chat });
+		// todo: 
 	}
 	else { // me already joined in chat
-		document.getElementById(chat).style.display = "none"; // jquery exception in "|"
 		showMessage("chatStarted", chat);
 	}
 }
-
 
 function getUserLink(user) {
 	var chat = generateChatRoomName(user.id);
@@ -250,15 +252,10 @@ function generateChatRoomName(userid) {
 	return ids[0] + "|" + ids[1]; // unique name for this users private 
 }
 
-// Update the relative time stamps on the chat messages every minute
-setInterval(function () {
-
-	$(".timesent").each(function () {
-		var each = moment($(this).data('time'));
-		$(this).text(each.fromNow());
-	});
-
-}, 60000);
+function addMyRoom(room, symmetricKey) {
+	myRoomData[room] = symmetricKey;
+	localStorage.myRooms === JSON.stringify(myRoomData);
+}
 
 function setConnectionStatus(state) {
 	if (state === "connected") {
@@ -309,7 +306,7 @@ function createChatMessage(msg, user, imgg, now) {
 }
 
 function scrollToBottom() {
-	$("html, body").animate({ scrollTop: $(document).height() - $(window).height() }, 1000);
+	$("html, body").animate({ scrollTop: $(document).height() - $(window).height() }, 100);
 }
 
 function isValid(thatemail) {
@@ -321,58 +318,36 @@ function isValid(thatemail) {
 function showMessage(status, data) {
 
 	if (status === "connected") {
-
-		$(".section").children().css('display', 'none');
-		$(".connected").fadeIn(fadeInterval);
+		$("#screen").html(
+			"<div class='connected'>" +
+			"<img src='../img/unnamed.png' id='creatorImage' />" +
+			"<div class='infoConnected'>" +
+			"<h2>Who are you?</h2>" +
+			"<br/>" +
+			"<form class='loginForm'>" +
+			"<input type='text' id='yourName' placeholder='Your nick name' />" +
+			"<br/>" +
+			"<input type='email' id='yourEmail' placeholder='Your email address' />" +
+			"<br/>" +
+			"<input type='password' id='yourPass' placeholder='Your password' />" +
+			"<br/>" +
+			"<button type='submit' id='yourEnter'>ENTER</button>" +
+			"</form>" +
+			"</div>" +
+			"</div>");
 	}
 
 	else if (status === "signedin") {
-		$(".connected").css("display", "none");
-		$(".selectChatMessage").fadeIn(fadeInterval);
-	}
-
-	else if (status === "youStartedChatWithNoMessages") {
-
-		$(".left").fadeOut(fadeInterval, function () {
-			$(".invite-textfield").fadeOut(fadeInterval, function () {
-				$(".nomessages").fadeIn(fadeInterval);
-				$("footer").fadeIn(fadeInterval);
-			});
-		});
-
-		friend = data.users[1];
-		$("#noMessagesImage").attr("src", data.avatars[1]);
-	}
-
-	else if (status === "heStartedChatWithNoMessages") {
-
-		personInside.fadeOut(fadeInterval, function () {
-			$(".nomessages").fadeIn(fadeInterval);
-			$("footer").fadeIn(fadeInterval);
-		});
-
-		friend = data.users[0];
-		$("#noMessagesImage").attr("src", data.avatars[0]);
+		$("#screen").html(
+			"<div style='text-align: center;'>" +
+			"<h2>Please select a chat to start messaging</h2>" +
+			"</div>");
 	}
 
 	else if (status === "chatStarted") {
 
-		$(".section").children().css('display', 'none');
-		$(".chatscreen").css('display', 'block');
+		$("#screen").html(
+			"<div class='chatscreen'><ul class='chats'>" +
+			"<!-- The chat messages will go here --></ul></div>");
 	}
-
-	else if (status === "somebodyLeft") {
-
-		$("#leftImage").attr("src", data.avatar);
-		$(".nickname-left").text(data.user);
-
-		$(".section").children().css('display', 'none');
-		$("footer").css('display', 'none');
-		$(".left").fadeIn(fadeInterval);
-	}
-}
-
-function addMyRoom(room, symmetricKey) {
-	myRoomData[room] = symmetricKey;
-	localStorage.myRooms === JSON.stringify(myRoomData);
 }

@@ -78,78 +78,35 @@
 							<li>
 								<a href="/">Home</a>
 							</li>
+							<li class="nav-item d-none d-md-block">
+								<a class="nav-link nav-link-expand" href="#">
+									<i class="ficon ft-maximize"></i>
+								</a>
+							</li>
 						</ul>
 					</div>
 				</div>
 			</nav>
 
 			<div class="row">
-				<div class="col-lg-12" class="section">
-					<!-- These elements are displayed as white info cards in the middle of the screen -->
-					<div class="connected">
-						<img src="../img/unnamed.png" id="creatorImage" />
 
-						<div class="infoConnected">
-							<h2>Who are you?</h2>
-							<br/>
+				<!-- These elements are displayed as white info cards in the middle of the screen -->
+				<div class="col-xs-12 col-sm-12">
 
-							<form class="loginForm">
-								<input type="text" id="yourName" placeholder="Your nick name" />
-								<br/>
-								<input type="email" id="yourEmail" placeholder="Your email address" />
-								<br/>
-								<input type="password" id="yourPass" placeholder="Your password" />
-								<br/>
-								<button type="submit" id="yourEnter">ENTER</button>
-							</form>
-
-						</div>
-					</div>
-
-					<div class="selectChatMessage">
-						<h2>Please select a chat to start messaging</h2>
-					</div>
-
-					<div class="left">
-
-						<img src="../img/unnamed.png" id="leftImage" />
-
-						<div class="info">
-							<h2>
-								<span class="nickname-left"></span> has left this chat.</h2>
-							<h5>Invite somebody else by sending them this page.</h5>
-						</div>
-
-					</div>
-
-					<div class="nomessages">
-						<img src="../img/unnamed.png" id="noMessagesImage" />
-						<div class="info">
-							<h2>You are chatting with
-								<span class="nickname-chat"></span>.</h2>
-							<h5>Send them a message from the form below!</h5>
-						</div>
-					</div>
-
-					<div class="chatscreen">
-						<ul class="chats">
-							<!-- The chat messages will go here -->
-						</ul>
-					</div>
-
+					<section id="screen">
+						<h2 style='text-align: center;'>Welcome to Secure Chat</h2>
+					</section>
 				</div>
 			</div>
-		</div>
 
+			<footer class="fixed-bottom">
+				<form id="chatform">
+					<textarea id="message" placeholder="Write a message..."></textarea>
+				</form>
+			</footer>
+		</div>
 	</div>
 
-
-	<footer>
-		<form id="chatform">
-			<textarea id="message" placeholder="Write something.."></textarea>
-			<input type="submit" id="submit" value="SEND" />
-		</form>
-	</footer>
 
 	<!-- jQuery CDN -->
 	<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
@@ -163,16 +120,6 @@
 	<script src="https://cdn.jsdelivr.net/npm/node-forge@0.7.0/dist/forge.min.js"></script>
 	<!-- Client Core Js -->
 	<script src="../js/client.js"></script>
-	<!-- Menu collapse Js Script -->
-	<script>
-		$(document).ready(function () {
-			$('#sidebarCollapse').on('click', function () {
-				$('#sidebar, #content').toggleClass('active');
-				$('.collapse.in').toggleClass('in');
-				$('a[aria-expanded=true]').attr('aria-expanded', 'false');
-			});
-		});
-	</script>
 </body>
 
 </html>
