@@ -8,7 +8,7 @@
 //      signed              on user successfull signed in to application
 //      update              on update users and rooms list to all users
 //      msg                 on send or receive message in room or private socket
-//      error               on an error occured
+//      exception           on an error occured
 //      typing              on a user typing some thing in message text box
 
 // Use the gravatar module, to turn email addresses into avatar images:
@@ -16,18 +16,19 @@ var gravatar = require('gravatar');
 var manager = require('./manager.js');
 var connCount = 1;
 var globalRoom = "environment"; // add any authenticated user to this room
+var chat = {}; // socket.io
 
 // Export a function, so that we can pass 
 // the app and io instances from the app.js file:
 module.exports = function (app, io) {
     // Initialize a new socket.io application, named 'chat'
-    var chat = io.on('connection', function (socket) {
+    chat = io.on('connection', function (socket) {
 
         console.info("socket " + connCount++ + "th connected by id: " + socket.id);
 
         // When the client emits 'login', save his name and avatar,
         // and add them to the room
-        socket.on('login', function (data) {
+        socket.on('login', data => {
 
             var user = manager.clients[data.email.hashCode()];
             if (user == null) {  // new user
@@ -63,14 +64,21 @@ module.exports = function (app, io) {
             // send success ack to user by self data object
             socket.emit("signed", user);
 
-            socket.join(globalRoom);
+            socket.join(globalRoom); // join all users in global authenticated group
+           
+            // add user to all joined rooms
+            var userRooms = manager.getUserRooms(user.id, true); // by p2p rooms
+            for (room in userRooms) {
+                socket.join(room);
+            }
+
             console.info("User " + user.username + " connected")
             //
             // tell new user added and list updated to everyone except the socket that starts it
             chat.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRoomsName() });
 
             // Somebody left the chat
-            socket.on('disconnect', function () {
+            socket.on('disconnect', () => {
                 // find user who abandon sockets
                 var user = manager.findUser(socket.id);
                 if (user !== null) {
@@ -89,18 +97,25 @@ module.exports = function (app, io) {
             });
 
             // Handle the sending of messages
-            socket.on('msg', (data) => {
-                // When the server receives a message, it sends it to the other person in the room.
-                socket.broadcast.to(data.to).emit('receive', data);
+            socket.on('msg', data => {
+                var from = manager.findUser(socket.id);
+                var room = manager.rooms[data.to];
+
+                if (from != null && room != null && room.users.indexOf(from.id) != -1) {
+                    var msg = manager.messages[room.name];
+                    if (msg == null)
+                        msg = manager.messages[room.name] = [];
+
+                    data.date = Date.now();
+                    data.type = "msg";
+                    // When the server receives a message, it sends it to the other person in the room.
+                    socket.broadcast.to(room.name).emit('receive', data);
+                    msg.push(data);
+                }
             });
 
-            // listen on typing
-            socket.on("typing", (data) => {
-                socket.broadcast.emit("typing", { username: socket.username });
-            })
-
             // Handle the request of users for chat
-            socket.on("request", (data) => {
+            socket.on("request", data => {
 
                 // find user who requested to this chat by socket id
                 var from = manager.findUser(socket.id);
@@ -127,7 +142,7 @@ module.exports = function (app, io) {
             });
 
             // Handle the request of users for chat
-            socket.on("accept", (data) => {
+            socket.on("accept", data => {
 
                 // find user who accepted to this chat by socket id
                 var from = manager.findUser(socket.id);
@@ -139,7 +154,7 @@ module.exports = function (app, io) {
                 if (from != null && to != null) {
                     var room = manager.rooms[data.room];
                     if (room == null) { // new p2p room
-                        room = { name: data.room, p2p: true, adminUserId: from.id, users: [] };
+                        room = { name: data.room, p2p: true, adminUserId: from.id, users: [from.id] };
                         manager.rooms[data.room] = room;
                         socket.to(from.socketid).join(data.room); // add admin to self chat room
                     }
@@ -154,7 +169,7 @@ module.exports = function (app, io) {
             });
 
             // Handle the request of users for chat
-            socket.on("reject", (data) => {
+            socket.on("reject", data => {
 
                 // find user who accepted to this chat by socket id
                 var from = manager.findUser(socket.id);
@@ -168,6 +183,21 @@ module.exports = function (app, io) {
                     socket.to(to.socketid).emit("reject", { from: from.id, p2p: (room == null), room: data.room })
                 }
             });
+
+            // Handle the request of users for chat
+            socket.on("fetch-messages", data => {
+                // find fetcher user
+                var fetcher = manager.findUser(socket.id);
+
+                var room = manager.rooms[data];
+
+                // check fetcher was a user of room
+                if (room != null && room.users.indexOf(fetcher.id) !== -1)
+                    socket.emit("fetch-message", { room: room.name, messages: manager.messages[room.name] });
+                else
+                    socket.emit("exception", "you are not join on <" + data + "> room!");
+            });
+
         } // signed-in
 
     }); // connected user - socket scope

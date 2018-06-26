@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
-<!--
-	This file is rendered by express.js, when the rurl /chat/123456 is visited in a browser.
+<!-- 	
+	This file is rendered by express.js, when the home url of the chat is opened in a browser.
 	It includes jQuery, socket.io.js (it is automatically served by the socket.io library), 
 	and a few more JavaScript files that you should check out.
 -->
@@ -9,117 +9,127 @@
 <html>
 
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-
 	<title>Secure Chat</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<link rel="icon" href="img/favicon.ico">
-
-	<!-- Bootstrap CSS CDN -->
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans Condensed:300italic,300,700" rel="stylesheet" type="text/css">
-	<link rel="stylesheet" href="../css/sidebar.css">
-	<link type="text/css" rel="stylesheet" href="../css/stylesheet.css" />
+	<!--===============================================================================================-->
+	<!-- fonts CSS CDN -->
+	<link rel='stylesheet' type='text/css' href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,600,700,300'>
+	<!-- meyer-reset CSS CDN -->
+	<link rel='stylesheet' type='text/css' href='https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css'>
+	<!-- font-awesome CSS CDN -->
+	<link rel='stylesheet' type='text/css' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.2/css/font-awesome.min.css'>
+	<!-- Login form CSS -->
+	<link rel="stylesheet" type="text/css" href="css/login.css">
+	<!-- Core CSS -->
+	<link rel='stylesheet' type='text/css' href='css/stylesheet.css'>
+	<!--===============================================================================================-->
 </head>
 
 <body>
-	<div class="wrapper">
-		<!-- Sidebar Holder -->
-		<nav id="sidebar">
-			<div class="sidebar-header">
-				<h2 class="bannertext">Secure
-					<span>&nbsp;Chat</span>
-				</h2>
-			</div>
+	<div class="limiter">
+		<div class="container-login100">
+			<div class="wrap-login100">
+				<form id="loginForm" class="login100-form validate-form">
+					<span class="login100-form-logo">
+						<img src="img/unnamed.png">
+					</span>
 
-			<ul class="list-unstyled components">
-				<img id="myAvatar" class="center" src="img/unnamed.png" width="80">
-				<p id="myUsername">Login</p>
-				<li class="active">
-					<a href="#usersmenu" data-toggle="collapse" aria-expanded="true">Users</a>
-					<ul class="collapse list-unstyled" id="usersmenu">
-					</ul>
-				</li>
-				<li>
-					<a href="#roomsmenu" data-toggle="collapse" aria-expanded="true">Rooms</a>
-					<ul class="collapse list-unstyled" id="roomsmenu">
-					</ul>
-				</li>
-			</ul>
+					<span class="login100-form-title">Login</span>
 
-			<ul class="list-unstyled CTAs">
-				<li>
-					<a href="#" class="create-room">Create Room</a>
-				</li>
-			</ul>
-		</nav>
+					<div class="wrap-input100 validate-input" data-validate="Enter username">
+						<input id="yourName" class="input100" type="text" name="username" placeholder="Username">
+						<span class="focus-input100"></span>
+					</div>
 
-		<!-- Page Content Holder -->
-		<div id="content">
+					<div class="wrap-input100 validate-input" data-validate="Enter email">
+						<input id="yourEmail" class="input100" type="email" name="email" placeholder="Email">
+						<span class="focus-input100"></span>
+					</div>
 
-			<nav class="navbar navbar-default banner">
-				<div class="container-fluid">
-					<div class="navbar-header">
-						<button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
-							<i class="glyphicon glyphicon-align-left"></i>
-							<span>Menu</span>
+					<div class="wrap-input100 validate-input" data-validate="Enter password">
+						<input id="yourPass" class="input100" type="password" name="pass" placeholder="Password">
+						<span class="focus-input100"></span>
+					</div>
+
+					<div class="container-login100-form-btn">
+						<button class="login100-form-btn">
+							Login
 						</button>
-						<div class="navbar-brand">
-							<div id="connected" class="connection-img" style="display: none;" title="connected to server strongly"></div>
-							<div id="disconnected" class="connection-img" style="display: none;" title="server not found"></div>
-							<div id="connecting" class="connection-img" title="trying to connect server..."></div>
-						</div>
 					</div>
 
-					<div class="collapse navbar-collapse">
-						<ul class="nav navbar-nav navbar-right">
-							<li>
-								<a href="/">Home</a>
-							</li>
-							<li class="nav-item d-none d-md-block">
-								<a class="nav-link nav-link-expand" href="#">
-									<i class="ficon ft-maximize"></i>
-								</a>
-							</li>
-						</ul>
-					</div>
-				</div>
-			</nav>
-
-			<div class="row">
-
-				<!-- These elements are displayed as white info cards in the middle of the screen -->
-				<div class="col-xs-12 col-sm-12">
-
-					<section id="screen">
-						<h2 style='text-align: center;'>Welcome to Secure Chat</h2>
-					</section>
-				</div>
-			</div>
-
-			<footer class="fixed-bottom">
-				<form id="chatform">
-					<textarea id="message" placeholder="Write a message..."></textarea>
 				</form>
-			</footer>
+			</div>
 		</div>
 	</div>
 
-
+	<div id="frame" style="display: none;">
+		<div id="sidepanel">
+			<div id="profile">
+				<div class="wrap">
+					<img id="profile-img" src="img/unnamed.png" class="online" />
+					<p id="myUsername">My Name</p>
+					<i class="fa fa-chevron-down expand-button" aria-hidden="true"></i>
+					<div id="expanded">
+						<label for="email">
+							<i class="fa fa-at" aria-hidden="true"></i>
+						</label>
+						<input id="myEmail" name="email" type="text" value="email@provider.com" />
+					</div>
+				</div>
+			</div>
+			<div id="search">
+					<label for=""><i class="fa fa-search" aria-hidden="true"></i></label>
+					<input type="text" placeholder="Search contacts...">
+				</div>
+			<div id="contacts">
+				<ul id="userContacts"></ul>
+				<ul id="channelContacts"></ul>
+			</div>
+			<div id="bottom-bar">
+				<button id="addcontact">
+					<i class="fa fa-group fa-fw" aria-hidden="true"></i>
+					<span>Add Channel</span>
+				</button>
+				<button id="settings">
+					<i class="fa fa-cog fa-fw" aria-hidden="true"></i>
+					<span>Settings</span>
+				</button>
+			</div>
+		</div>
+		<div class="content">
+			<div class="contact-profile">
+				<img id="channel-profile-img" src="img/unnamed.png" />
+				<p id="channel-profile-name">...</p>
+			</div>
+			<div class="messages">
+				<ul></ul>
+			</div>
+			<div class="message-input">
+				<div class="wrap">
+					<input type="text" placeholder="Write your message..." />
+					<i class="fa fa-paperclip attachment" aria-hidden="true"></i>
+					<button class="submit">
+						<i class="fa fa-paper-plane" aria-hidden="true"></i>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--===============================================================================================-->
 	<!-- jQuery CDN -->
 	<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-	<!-- Bootstrap Js CDN -->
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-	<!-- Momentjs Js CDN -->
-	<script src="https://momentjs.com/downloads/moment-with-locales.min.js"></script>
 	<!-- Socket.io Js CDN -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
 	<!-- Forge Js CDN -->
 	<script src="https://cdn.jsdelivr.net/npm/node-forge@0.7.0/dist/forge.min.js"></script>
+	<!-- Login form Js -->
+	<script src="js/login.js"></script>
 	<!-- Client Core Js -->
-	<script src="../js/client.js"></script>
+	<script src="js/client.js"></script>
+	<!--===============================================================================================-->
 </body>
 
 </html>

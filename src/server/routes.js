@@ -8,7 +8,7 @@ module.exports = function (app, io) {
 	app.get('/', function (req, res) {
 
 		// Render views/home.html
-		res.render('home');
+		res.render('chat');
 	});
 
 	app.get('/chat', function (req, res) {

@@ -6,6 +6,7 @@ var socket = io(), // connect to the socket
 	lstUsers = null,
 	lstRooms = null,
 	currentChatName = "",
+	roomMessages = {},
 	state = ["offline", "online"], // 0: offline, 1: online
 	sh512Hasing = forge.md.sha512.create(),
 	myRoomData = localStorage.myRooms == null
@@ -17,9 +18,7 @@ socket.on("connect", () => {
 	setConnectionStatus("connected");
 
 	if (localStorage.me == null) {
-		showMessage("connected");
-		$(".loginForm").on('submit', function (e) {
-
+		$("#loginForm").on('submit', function (e) {
 			e.preventDefault();
 
 			var name = $.trim($("#yourName").val());
@@ -29,7 +28,7 @@ socket.on("connect", () => {
 			}
 
 			var email = $("#yourEmail").val();
-			if (!isValid(email)) {
+			if (email.length < 5) {
 				alert("Wrong e-mail format!");
 				return;
 			}
@@ -52,60 +51,66 @@ socket.on("connect", () => {
 
 
 socket.on("disconnect", () => {
-	setConnectionStatus("connecting");
+	setConnectionStatus("disconnected");
 });
 
 
-socket.on("exception", (err) => {
+socket.on("exception", err => {
 	alert(err);
 });
 
 
 // save the my user data
-socket.on('signed', (data) => {
+socket.on('signed', data => {
 	me = data;
+	me.lastLoginDate = Date.now();
 	localStorage.me = JSON.stringify(me);
-	$("#myAvatar").attr("src", me.avatar);
+	$("#profile-img").attr("src", me.avatar);
 	$("#myUsername").html(me.username);
+	$("#myEmail").val(me.email);
+
 	showMessage("signedin", me);
 });
 
 
 // update users and rooms data
-socket.on('update', (data) => {
-	lstUsers = data.users; //.filter(function (u) { return u.id !== me.id; });
+socket.on('update', data => {
+	lstUsers = data.users;
 	lstRooms = data.rooms;
-	$("#usersmenu").empty();
-	$("#roomsmenu").empty();
+	$("#userContacts").empty();
+	$("#channelContacts").empty();
 
 	delete lstUsers[me.id]; // remove me from users list
 	for (prop in lstUsers) {
 		var user = lstUsers[prop];
-		$("#usersmenu").append("<li id='userid_" + user.id + "'>" + getUserLink(user) + "</li>");
+		var chat = getChannelName(user.id);
+		$("#userContacts").append("<li id='" + chat + "' class='contact'>" + getUserLink(user, chat) + "</li>");
 	}
-	$("#usersmenu").collapse('show');
 
 	for (prop in lstRooms) {
 		var room = lstRooms[prop];
-		$("#roomsmenu").append("<li id='roomname_" + room.roomName + "'>" + room.roomName + "</li>")
+		$("#channelContacts").append("<li id='" + room.roomName + "' class='contact'>" + getChannelLink(room) + "</li>")
 	};
-	$("#roomsmenu").collapse('show');
 
+	if (currentChatName != null && currentChatName.length > 0) {
+		showMessage("startChat", currentChatName);
+	}
 });
 
 
 // when a client socket disconnected
-socket.on('leave', (leftedUser) => {
+socket.on('leave', leftedUser => {
 	var u = lstUsers[leftedUser.id];
 	if (u != null) {
 		u.status = leftedUser.status;
-		$("#userid_" + u.id).html(getUserLink(u))
+		var chat = getChannelName(u.id);
+		$("#" + getChannelName(u.id)).html(getUserLink(u, chat))
 	}
 });
 
 
 // on a user join request to the chat's which me is admin of 
-socket.on('request', (data) => {
+socket.on('request', data => {
 	var reqUser = lstUsers[data.from];
 	if (reqUser == null) return; // incorrect request from
 
@@ -136,23 +141,22 @@ socket.on('request', (data) => {
 	//
 	// send data to requester user to join in current room
 	socket.emit("accept", { to: data.from, chatKey: encSymmetricKey, room: data.room })
-	showMessage("chatStarted", data);
+	showMessage("chatStarted", data.room);
 });
 
 
-socket.on('accept', (data) => {
+socket.on('accept', data => {
 	console.log("room [" + data.room + "] is now open.");
 	var admin = lstUsers[data.from];
 	var symmetricKey = data.chatKey + "decryptByMyPrivateKey";
 	//
 	// store this room to my rooms list
 	addMyRoom(data.room, { room: data.room, p2p: data.p2p, chatKey: symmetricKey });
-	showMessage("chatStarted", data);
-	document.getElementById(data.room).style.display = "none"; // jquery exception in "|"
+	showMessage("chatStarted", data.room);
 });
 
 
-socket.on('reject', (data) => {
+socket.on('reject', data => {
 	var admin = lstUsers[data.from];
 	var reason = data.msg == null ? "" : data.msg;
 	if (data.p2p)
@@ -160,70 +164,25 @@ socket.on('reject', (data) => {
 	else
 		alert("The user <" + admin.username + "> as admin of <" + data.room + ">, rejected your chat request. " + reason);
 
-	document.getElementById(data.room).style.display = "none"; // jquery exception in "|"
+	$("#" + data.room).find(".wait").css("display", "none");
 });
 
 
-socket.on('receive', function (data) {
-	if (currentChatName = data.to) {
-		// Create a new chat message and display it directly
-		showMessage('chatStarted');
-	}
-
-	if (data.msg.trim().length) {
-		createChatMessage(data.msg, data.from, data.img, moment());
-		scrollToBottom();
-	}
+socket.on('receive', data => {
+	if (currentChatName == data.to)  // from current chat
+		addMessage(data);
+	else // keep in buffer for other time view
+		getMessages(data.to).push(data);
 });
 
-
-$("#chatform").on('submit', function (e) {
-
-	e.preventDefault();
-
-	if ($("#message").val().trim().length) {
-		createChatMessage($("#message").val(), me.username, me.avatar, moment());
-		scrollToBottom();
-
-		// Send the message to the other person in the chat
-		socket.emit('msg', { msg: $("#message").val(), from: me.id, to: currentChatName, img: me.avatar });
-
-	}
-	// Empty the textarea
-	$("#message").val("");
-	$("#message").focus();
+socket.on('fetch-messages', data => {
+	if (data.messages == null)
+		data.messages == [];
+	roomMessages[data.room] = data.messages;
 });
-
-
-$("#message").keypress(function (e) {
-	// Submit the form on enter
-	if (e.which == 13) {
-		e.preventDefault();
-		$("#chatform").trigger('submit');
-	}
-});
-
-// Update the relative time stamps on the chat messages every minute
-setInterval(function () {
-
-	$(".timesent").each(function () {
-		var each = moment($(this).data('time'));
-		$(this).text(each.fromNow());
-	});
-
-}, 60000);
-
-// Menu collapse Js Script 
-$('#sidebarCollapse').on('click', function () {
-	$('#sidebar, #content').toggleClass('active');
-	$('.collapse.in').toggleClass('in');
-	$('a[aria-expanded=true]').attr('aria-expanded', 'false');
-});
-
 
 function reqChatBy(chat) {
-	currentChatName = chat;
-	document.getElementById(chat).style.backgroundColor = "#123456"; // jquery exception in "|"
+	$("#" + chat).find(".wait").css("display", "block");
 	var roomKey = myRoomData[chat];
 	if (roomKey == null) {
 		socket.emit("request", { room: chat });
@@ -234,22 +193,29 @@ function reqChatBy(chat) {
 	}
 }
 
-function getUserLink(user) {
-	var chat = generateChatRoomName(user.id);
-	return "<a href='javascript:reqChatBy(\"" + chat + "\");'>" +
-		"<div class='user'>" +
-		"<img class='user-avatar' src='" + user.avatar + "'>" +
-		"<div class='wait' id='" + chat + "'></div>" +
-		"<div style='margin-top: 12px'>&nbsp;" +
-		"<img src='img/" + user.status + "_status.png' height='16' width='16'>" + user.username +
-		"</div>" +
-		"</div></a>";
+function getUserLink(user, chat) {
+	return "<div class='wrap' onclick='reqChatBy(\"" + chat + "\")'>" +
+		"<span class='contact-status " + user.status + "'></span>" +
+		"<img src='" + user.avatar + "' />" +
+		"<div class='wait'></div>" +
+		"<div class='meta'>" +
+		"<p class='name'>" + user.username + "</p>" +
+		"</div></div>";
 }
 
+function getChannelLink(room) {
+	return "<div class='wrap' onclick='reqChatBy(\"" + room.roomName + "\")'>" +
+		"<span class='contact-status away'></span>" +
+		"<img src='img/unnamed.png' />" +
+		"<div class='wait'></div>" +
+		"<div class='meta'>" +
+		"<p class='name'>" + room.roomName + "</p>" +
+		"</div></div>";
+}
 
-function generateChatRoomName(userid) {
+function getChannelName(userid) {
 	var ids = [me.id, userid].sort();
-	return ids[0] + "|" + ids[1]; // unique name for this users private 
+	return ids[0] + "_" + ids[1]; // unique name for this users private 
 }
 
 function addMyRoom(room, symmetricKey) {
@@ -258,96 +224,100 @@ function addMyRoom(room, symmetricKey) {
 }
 
 function setConnectionStatus(state) {
+	$("#profile-img").removeClass();
+
 	if (state === "connected") {
-		$("#disconnected").fadeOut(1, () =>
-			$("#connecting").fadeOut(1, () =>
-				$("#connected").fadeIn()));
+		$("#profile-img").addClass('online');
 	}
 	else if (state === "disconnected") {
-		$("#connected").fadeOut(1, () =>
-			$("#connecting").fadeOut(1, () =>
-				$("#disconnected").fadeIn()));
-	}
-	else if (state === "connecting") {
-		$("#connected").fadeOut(1, () =>
-			$("#disconnected").fadeOut(1, () =>
-				$("#connecting").fadeIn()));
+		$("#profile-img").addClass('offline');
 	}
 }
 
-// Function that creates a new chat message
-function createChatMessage(msg, user, imgg, now) {
-	var who = '';
-
-	if (user === me.username) {
-		who = 'me';
-	}
-	else {
-		who = 'you';
-	}
-
-	var li = $(
-		'<li class=' + who + '>' +
-		'<div class="image">' +
-		'<img src=' + imgg + ' />' +
-		'<b></b>' +
-		'<i class="timesent" data-time=' + now + '></i> ' +
-		'</div>' +
-		'<p></p>' +
-		'</li>');
-
-	// use the 'text' method to escape malicious user input
-	li.find('p').text(msg);
-	li.find('b').text(user);
-
-	$(".chats").append(li);
-
-	$(".timesent").last().text(now.fromNow());
-}
-
-function scrollToBottom() {
-	$("html, body").animate({ scrollTop: $(document).height() - $(window).height() }, 100);
-}
-
-function isValid(thatemail) {
-
-	var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-	return re.test(thatemail);
-}
-
-function showMessage(status, data) {
-
-	if (status === "connected") {
-		$("#screen").html(
-			"<div class='connected'>" +
-			"<img src='../img/unnamed.png' id='creatorImage' />" +
-			"<div class='infoConnected'>" +
-			"<h2>Who are you?</h2>" +
-			"<br/>" +
-			"<form class='loginForm'>" +
-			"<input type='text' id='yourName' placeholder='Your nick name' />" +
-			"<br/>" +
-			"<input type='email' id='yourEmail' placeholder='Your email address' />" +
-			"<br/>" +
-			"<input type='password' id='yourPass' placeholder='Your password' />" +
-			"<br/>" +
-			"<button type='submit' id='yourEnter'>ENTER</button>" +
-			"</form>" +
-			"</div>" +
-			"</div>");
-	}
-
-	else if (status === "signedin") {
-		$("#screen").html(
-			"<div style='text-align: center;'>" +
-			"<h2>Please select a chat to start messaging</h2>" +
-			"</div>");
+function showMessage(status, room) {
+	if (status === "signedin") {
+		$(".limiter").css("display", "none");
+		$("#frame").css("display", "block");
 	}
 
 	else if (status === "chatStarted") {
+		currentChatName = room;
+		$("li").removeClass("active");
+		var contact = $("#" + room);
+		contact.addClass("active");
+		$("#channel-profile-img").attr("src", contact.find("img").attr("src"))
+		$("#channel-profile-name").html(contact.find(".name").html())
+		contact.find(".wait").css("display", "none");
 
-		$("#screen").html(
-			"<div class='chatscreen'><ul class='chats'>" +
-			"<!-- The chat messages will go here --></ul></div>");
+		// show old messages
+		var msgs = getMessages(room);
+		var roomKey = myRoomData[room];
+		// todo: add all messages to screen
 	}
 }
+
+
+function newMessage() {
+	message = $(".message-input input").val();
+	if ($.trim(message) == '') {
+		return false;
+	}
+
+	if (currentChatName == null || currentChatName == '') {
+		alert("Please first select a chat to sending message!");
+		return false;
+	}
+
+	// Send the message to the other person in the chat
+	var data = { msg: message, from: me.id, to: currentChatName, avatar: me.avatar };
+	socket.emit('msg', data);
+
+	addMessage(data);
+
+	// Empty the message input
+	$('.message-input input').val(null);
+	$('.message-input input').focus();
+};
+
+function addMessage(data) {
+	data.state = "replies"
+	if (data.from == me.id)
+		data.state = "sent";
+
+	// store messages in local
+	getMessages(data.to).push(data);
+
+	// add to self screen
+	$('<li class="' + data.state + '"><img src="' + data.avatar + '" /><p>' + data.msg + '</p></li>').appendTo($('.messages ul'));
+	$(".messages").animate({ scrollTop: $(document).height() }, "fast");
+}
+
+
+function getMessages(room) {
+	var msgArray = roomMessages[room];
+	if (msgArray == null) {
+		// fetch from server
+		socket.emit("fetch-messages", room);
+		return roomMessages[room] = [];
+	}
+	else
+		return msgArray;
+}
+
+$(".messages").animate({ scrollTop: $(document).height() }, "fast");
+
+$(".expand-button").click(function () {
+	$("#profile").toggleClass("expanded");
+	$("#contacts").toggleClass("expanded");
+});
+
+$('.submit').click(function () {
+	newMessage();
+});
+
+$(window).on('keydown', function (e) {
+	if (e.which == 13) {
+		newMessage();
+		return false;
+	}
+});

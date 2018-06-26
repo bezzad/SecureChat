@@ -12,18 +12,14 @@ Client side secure chat, based on [node.js](https://nodejs.org), [socket.io](htt
 
 * [**Socket.io**](https://socket.io) enables real-time bidirectional event-based communication. It works on every platform, browser or device, focusing equally on reliability and speed.
 
-* [**Node Chat System**](https://tutorialzine.com/2014/03/nodejs-private-webchat) a realtime chat system with Node.js and the [socket.io](https://socket.io/) library for [Tutorialzine.com](https://tutorialzine.com).
-
 * [**jQuery**](https://jquery.com/) is a fast, small, and feature-rich JavaScript library.
 
 * [**Forge**](https://github.com/digitalbazaar/forge#installation) is a native implementation of [TLS](http://en.wikipedia.org/wiki/Transport_Layer_Security) (and various other cryptographic tools) in [JavaScript](http://en.wikipedia.org/wiki/JavaScript).
 
 * [**Local Storage**](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) is analogous to [sessionStorage](https://developer.mozilla.org/en-US/docs/Web/API/sessionStorage), with the same same-origin rules applied, but it is persistent across sessions. `localStorage` was introduced in Firefox 3.5.
 
-* [**Moment.js**](http://momentjs.com/) for parse, validate, manipulate, and display dates and times in JavaScript.
-
-* [**Bootstrap**](https://getbootstrap.com/) is an open source toolkit for developing with HTML, CSS, and JS.
-
 * [**Gravatar**](https://github.com/emerleite/node-gravatar) a library to generate Gravatar URLs in Node.js Based on gravatar specs - `http://en.gravatar.com/site/implement/hash/` and `http://en.gravatar.com/site/implement/images/`.
 
 * [**Tchat card**](https://bootsnipp.com/snippets/0e3Ma) a Bootstrap chat theme snippet by [evarevirus](https://bootsnipp.com/evarevirus)
+
+* [**Login form**](https://colorlib.com/wp/template/login-form-v3/) a cool login form template to be used for any website and app. Made by Colorlib.
