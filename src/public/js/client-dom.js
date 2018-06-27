@@ -1,5 +1,25 @@
 (function ($) {
     /*==================================================================
+    [ Expand profile ]*/
+    $(".expand-button").click(function () {
+        $("#profile").toggleClass("expanded");
+        $("#contacts").toggleClass("expanded");
+    });
+    
+    /*==================================================================
+    [ Enter send message ]*/
+    $('.submit').click(function () {
+        newMessage();
+    });
+    
+    $(window).on('keydown', function (e) {
+        if (e.which == 13) {
+            newMessage();
+            return false;
+        }
+    });
+
+    /*==================================================================
     [ Focus input ]*/
     $('.input100').each(function(){
         $(this).on('blur', function(){
