@@ -36,22 +36,22 @@ socket.on("connect", () => {
 	}
 });
 
-
+// when me disconnected from server then changed my profile status to offline mode
 socket.on("disconnect", () => {
 	setConnectionStatus("disconnected");
 });
 
-
+// on exception occurred from server call
 socket.on("exception", err => {
 	alert(err);
 });
 
 
-// save the my user data
+// save the my user data when I signed-in to server successfully
 socket.on('signed', signedin);
 
 
-// update users and rooms data
+// update users and rooms data when thats status changed
 socket.on('update', data => {
 	lstUsers = data.users;
 	lstRooms = data.rooms;
@@ -76,7 +76,7 @@ socket.on('update', data => {
 });
 
 
-// when a client socket disconnected
+// when a client socket disconnected or a room admin be offile
 socket.on('leave', leftedUser => {
 	var u = lstUsers[leftedUser.id];
 	if (u != null) {
@@ -87,7 +87,7 @@ socket.on('leave', leftedUser => {
 });
 
 
-// on a user join request to the chat's which me is admin of 
+// on a user requested to chat by me or join to the room which is me admin of 
 socket.on('request', data => {
 	var reqUser = lstUsers[data.from];
 	if (reqUser == null) {
@@ -128,6 +128,7 @@ socket.on('request', data => {
 });
 
 
+// when my chat request accepted by channel admin
 socket.on('accept', data => {
 	console.log("room [" + data.room + "] is now open.");
 	var symmetricKey = data.chatKey + "decryptByMyPrivateKey";
@@ -138,6 +139,7 @@ socket.on('accept', data => {
 });
 
 
+// when my chat request rejected by channel admin
 socket.on('reject', data => {
 	var admin = lstUsers[data.from];
 	var reason = data.msg == null ? "" : data.msg;
@@ -150,6 +152,7 @@ socket.on('reject', data => {
 });
 
 
+// when a messsage sent to me or room which is I member in
 socket.on('receive', data => {
 	if (currentChatName == data.to)  // from current chat
 		addMessage(data);
@@ -158,6 +161,8 @@ socket.on('receive', data => {
 	getMessages(data.to).push(data);
 });
 
+
+// when get response of my requests to fetch history of the chat messages
 socket.on('fetch-messages', data => {
 	if (data.messages == null)
 		data.messages == []; // set to un-null to except next time requests
