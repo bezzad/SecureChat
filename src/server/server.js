@@ -14,6 +14,7 @@
 // Use the gravatar module, to turn email addresses into avatar images:
 var gravatar = require('gravatar');
 var manager = require('./manager.js');
+var serverVersion = manager.generateGuid(); // a unique version for every startup of server
 var connCount = 1;
 var globalRoom = "environment"; // add any authenticated user to this room
 var chat = {}; // socket.io
@@ -23,7 +24,6 @@ var chat = {}; // socket.io
 module.exports = function (app, io) {
     // Initialize a new socket.io application, named 'chat'
     chat = io.on('connection', function (socket) {
-
         console.info("socket " + connCount++ + "th connected by id: " + socket.id);
 
         // When the client emits 'login', save his name and avatar,
@@ -42,7 +42,8 @@ module.exports = function (app, io) {
                     "pubKey": data.pubKey, // public key of this client asymmetric cipher's                    
                     "password": data.password, // Store Password Hashing for client login to authenticate one user per email
                     "avatar": gravatar.url(data.email, { s: '140', r: 'x', d: 'mm' }), // user avatar picture's
-                    "status": "online" // { "online", "offline" }
+                    "status": "online", // { "online", "offline" }
+                    "serverVersion": serverVersion // chance of this version caused to refresh clients cached data
                 };
                 manager.clients[user.id] = user;
                 userSigned(user);
@@ -132,7 +133,7 @@ module.exports = function (app, io) {
                             socket.emit("reject", { from: adminUser.id, room: data.room, p2p: p2p, msg: "admin user is offline" });
                         }
                         else
-                            io.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
+                            chat.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
                         return;
                     }
                 }
@@ -193,9 +194,9 @@ module.exports = function (app, io) {
 
                 // check fetcher was a user of room
                 if (room != null && room.users.indexOf(fetcher.id) !== -1)
-                    socket.emit("fetch-message", { room: room.name, messages: manager.messages[room.name] });
+                    socket.emit("fetch-messages", { room: room.name, messages: manager.messages[room.name] });
                 else
-                    socket.emit("exception", "you are not join on <" + data + "> room!");
+                    socket.emit("exception", "you are not join on <" + data + "> room or meybe the server lost your data!!!");
             });
 
         } // signed-in
