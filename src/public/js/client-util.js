@@ -1,3 +1,5 @@
+"use strict";
+
 // variables which hold the data for each person
 var socket = io(), // connect to the socket
 	lstUsers = null,
@@ -141,8 +143,6 @@ function newMessage() {
 	var data = { msg: message, from: getMe().id, to: currentChatName, avatar: getMe().avatar };
 	socket.emit('msg', data);
 
-	addMessage(data);
-
 	// Empty the message input
 	$('.message-input input').val(null);
 	$('.message-input input').focus();
@@ -161,8 +161,9 @@ function appendMessage(data) {
 		data.state = "sent";
 
 	// add to self screen
-	$(`<li class="${data.state}"><img src="${data.avatar}" /><p>${data.msg}</p></li>`).appendTo('.messages ul');
-	$(".messages").animate({ scrollTop: $('.messages')[0].scrollHeight }, "fast");
+	var messagesScreen = $(".messages");
+	messagesScreen.find("ul").append(`<li class="${data.state}"><img src="${data.avatar}" /><p>${data.msg}</p></li>`); // append message to end of page
+	messagesScreen.scrollTop(messagesScreen[0].scrollHeight); // scroll to end of messages page
 }
 
 function getMessages(room) {

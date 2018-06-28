@@ -4,36 +4,39 @@
 // on connection to server get the id of person's room
 socket.on("connect", () => {
 	setConnectionStatus("connected");
+	console.log(`connected by socket.id: ${socket.id}`)
 
-	if (getMe() == null) {
-		$("#loginForm").on('submit', function (e) {
-			e.preventDefault();
+	setTimeout(() => {
+		if (getMe() == null) {
+			$("#loginForm").on('submit', function (e) {
+				e.preventDefault();
 
-			var name = $.trim($("#yourName").val());
-			if (name.length < 1) {
-				alert("Please enter a nick name longer than 1 character!");
-				return;
-			}
+				var name = $.trim($("#yourName").val());
+				if (name.length < 1) {
+					alert("Please enter a nick name longer than 1 character!");
+					return;
+				}
 
-			var email = $("#yourEmail").val();
-			if (email.length < 5) {
-				alert("Wrong e-mail format!");
-				return;
-			}
+				var email = $("#yourEmail").val();
+				if (email.length < 5) {
+					alert("Wrong e-mail format!");
+					return;
+				}
 
-			var pass = $("#yourPass").val();
-			if (pass.length < 2) {
-				alert("Please enter your passwrod longer than 2 character!");
-				return;
-			}
+				var pass = $("#yourPass").val();
+				if (pass.length < 2) {
+					alert("Please enter your passwrod longer than 2 character!");
+					return;
+				}
 
-			sh512Hasing.update(pass); // hasing password in sha-512
-			socket.emit('login', { username: name, email: email, password: sh512Hasing.digest().toHex(), pubKey: "testPubKey" });
-		});
-	}
-	else {
-		socket.emit('login', getMe());
-	}
+				sh512Hasing.update(pass); // hasing password in sha-512
+				socket.emit('login', { username: name, email: email, password: sh512Hasing.digest().toHex(), pubKey: "testPubKey" });
+			});
+		}
+		else {
+			socket.emit('login', getMe());
+		}
+	}, 250);
 });
 
 // when me disconnected from server then changed my profile status to offline mode
@@ -168,4 +171,9 @@ socket.on('fetch-messages', data => {
 		data.messages == []; // set to un-null to except next time requests
 	roomMessages[data.room] = data.messages;
 	updateMessages();
+});
+
+socket.on('error', function () {
+	console.log("Client: error");
+	socket.socket.reconnect();
 });

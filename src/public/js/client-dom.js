@@ -1,4 +1,6 @@
 (function ($) {
+    "use strict";
+    
     /*==================================================================
     [ Expand profile ]*/
     $(".expand-button").click(function () {

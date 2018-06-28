@@ -1,5 +1,6 @@
 // This file is required by app.js. It sets up event listeners
 // and listens for socket.io messages.
+"use strict";
 
 // Socket.io channels:
 //      connection          on new socket created
@@ -15,7 +16,6 @@
 var gravatar = require('gravatar');
 var manager = require('./manager.js');
 var serverVersion = manager.generateGuid(); // a unique version for every startup of server
-var connCount = 1;
 var globalRoom = "environment"; // add any authenticated user to this room
 var chat = {}; // socket.io
 
@@ -24,7 +24,7 @@ var chat = {}; // socket.io
 module.exports = function (app, io) {
     // Initialize a new socket.io application, named 'chat'
     chat = io.on('connection', function (socket) {
-        console.info("socket " + connCount++ + "th connected by id: " + socket.id);
+        console.info(`socket: ${socket.id} connected`);
 
         // When the client emits 'login', save his name and avatar,
         // and add them to the room
@@ -66,7 +66,7 @@ module.exports = function (app, io) {
             socket.emit("signed", user);
 
             socket.join(globalRoom); // join all users in global authenticated group
-           
+
             // add user to all joined rooms
             var userRooms = manager.getUserRooms(user.id, true); // by p2p rooms
             for (room in userRooms) {
@@ -98,7 +98,7 @@ module.exports = function (app, io) {
             });
 
             // Handle the sending of messages
-            socket.on('msg', data => {
+            socket.on("msg", data => {
                 var from = manager.findUser(socket.id);
                 var room = manager.rooms[data.to];
 
@@ -110,7 +110,8 @@ module.exports = function (app, io) {
                     data.date = Date.now();
                     data.type = "msg";
                     // When the server receives a message, it sends it to the other person in the room.
-                    socket.broadcast.to(room.name).emit('receive', data);
+                    //socket.broadcast.to(room.name).emit('receive', data);
+                    chat.in(room.name).emit('receive', data); // send all clients, so also to sender
                     msg.push(data);
                 }
             });
@@ -154,10 +155,13 @@ module.exports = function (app, io) {
                 // if users authenticated 
                 if (from != null && to != null) {
                     var room = manager.rooms[data.room];
-                    if (room == null) { // new p2p room
+
+                    if (room == null) { 
+
+                        // new p2p room
                         room = { name: data.room, p2p: true, adminUserId: from.id, users: [from.id] };
                         manager.rooms[data.room] = room;
-                        socket.to(from.socketid).join(data.room); // add admin to self chat room
+                        socket.to(from.socketid).join(room.name); // add admin to self chat room
                     }
                     //
                     // add new user to this room
@@ -193,7 +197,7 @@ module.exports = function (app, io) {
                 var room = manager.rooms[data];
 
                 // check fetcher was a user of room
-                if (room != null && room.users.indexOf(fetcher.id) !== -1)
+                if (fetcher != null && room != null && room.users.indexOf(fetcher.id) !== -1)
                     socket.emit("fetch-messages", { room: room.name, messages: manager.messages[room.name] });
                 else
                     socket.emit("exception", "you are not join on <" + data + "> room or meybe the server lost your data!!!");

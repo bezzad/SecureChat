@@ -5,7 +5,7 @@
 // the app and io instances from the app.js file:
 module.exports = function (app, io) {
 	app.get('/', function (req, res) {
-		// Render views/home.html
+		// Render views/chat.html
 		res.render('chat');
 	});
 };
