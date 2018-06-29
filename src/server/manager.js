@@ -53,12 +53,12 @@ e.getUserRooms = function (userId, byP2p = false) {
     return userRooms;
 }
 
-e.getRoomsName = function () {
+e.getRooms = function () {
     var lstRooms = {};
     for (prop in e.rooms) {
         var r = e.rooms[prop];
         if (r.p2p === false) {
-            lstRooms[prop] = r.roomName;
+            lstRooms[prop] = r;
         }
     }
     return lstRooms;

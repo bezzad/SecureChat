@@ -1,9 +1,8 @@
-
 * {
     margin: 0px;
     padding: 0px;
     box-sizing: border-box;
-  }
+}
 
 body, html {
     height: 100%;
@@ -684,21 +683,21 @@ body, html {
     margin-bottom: 20px;
 }
 
-#frame .content .messages ul li.sent img {
+#frame .content .messages ul li.replies img {
     margin: 6px 8px 0 0;
 }
 
-#frame .content .messages ul li.sent p {
+#frame .content .messages ul li.replies p {
     background: #435f7a;
     color: #f5f5f5;
 }
 
-#frame .content .messages ul li.replies img {
+#frame .content .messages ul li.sent img {
     float: right;
     margin: 6px 0 0 8px;
 }
 
-#frame .content .messages ul li.replies p {
+#frame .content .messages ul li.sent p {
     background: #f5f5f5;
     float: right;
 }
@@ -821,14 +820,19 @@ body, html {
 }
 
 .wait {
-	position: absolute;
-	border: 2px solid #66708d;
-	border-radius: 50%;
-	border-top: 2px solid #0af54a;
-	width: 40px;
-	height: 40px;
-	-webkit-animation: spin 1s linear infinite;
-	animation: spin 1s linear infinite;
-	z-index: 1;
-	display: none;
+    position: absolute;
+    border: 2px solid #66708d;
+    border-radius: 50%;
+    border-top: 2px solid #0af54a;
+    width: 40px;
+    height: 40px;
+    -webkit-animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite;
+    z-index: 1;
+    display: none;
+}
+
+p>b {
+    color: #cccccc;
+    font-weight: 600;
 }

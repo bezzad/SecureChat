@@ -4,6 +4,18 @@ Client side secure chat, based on [node.js](https://nodejs.org), [socket.io](htt
 
 -----------------------
 
+## How to use
+
+* install [node.js](https://nodejs.org)
+* clone this repository
+* go to `src\` folder
+* run below commands in your command line:
+    + $ npm install
+    + $ node app.js
+* open your browser and enter your server url (http://localhost)
+
+-----------------------
+
 ## References that have been used
 
 * [**Node.js®**](https://nodejs.org) is a [JavaScript](http://en.wikipedia.org/wiki/JavaScript) runtime built on [Chrome's V8 JavaScript engine](https://developers.google.com/v8/).
