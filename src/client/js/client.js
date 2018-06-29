@@ -7,7 +7,8 @@ var socket = io(), // connect to the socket
 	lstRooms = null,
 	currentChatName = "",
 	roomMessages = {},
-	state = ["offline", "online"]; // 0: offline, 1: online
+	state = ["offline", "online"], // 0: offline, 1: online
+	keys = getCipherKeys();
 
 // on connection to server get the id of person's room
 socket.on("connect", () => {
@@ -90,16 +91,18 @@ socket.on('request', data => {
 			return;
 		}
 	}
+	// encrypt the chat symmetricKey by requested user public key
+	var encryptedChannelKey = reqRoom.chatKey.asymEncrypt(data.pubKey)
 	//
 	// send data to requester user to join in current room
-	socket.emit("accept", { to: data.from, chatKey: encryptChannelKey(reqRoom, data.pubKey), room: reqRoom.name })
+	socket.emit("accept", { to: data.from, chatKey: encryptedChannelKey, room: reqRoom.name })
 	chatStarted(reqRoom.name);
 });
 
 // when my chat request accepted by channel admin
 socket.on('accept', data => {
-	console.log("room [" + data.room + "] is now open.");
-	var symmetricKey = data.chatKey + "decryptByMyPrivateKey";
+	// decrypt RSA cipher by my pricate key
+	var symmetricKey = data.chatKey.asymDecrypt(keys.privateKey);
 	//
 	// store this room to my rooms list
 	setRooms(data.room, { name: data.room, p2p: data.p2p, chatKey: symmetricKey });
@@ -146,13 +149,6 @@ socket.on('error', function () {
 // ------------------------------------ utilitie functions -------------------------------------
 // 
 //
-
-function encryptChannelKey(room, pubKey) {
-	// encrypt that by requested user public key
-	var encSymmetricKey = room.chatKey + pubKey + "EncryptedByAnotherUserPubKey";
-	return encSymmetricKey;
-}
-
 function reqChatBy(chat) {
 	$(`#${chat}`).find(".wait").css("display", "block");
 	var room = getRooms()[chat];
@@ -282,8 +278,12 @@ function newMessage() {
 		return false;
 	}
 
+	// get channel symmetric key and encrypt message
+	var chatSymmetricKey = getRooms()[currentChatName].chatKey;
+	var msg =  message.symEncrypt(chatSymmetricKey)
+
 	// Send the message to the chat channel
-	socket.emit('msg', { msg: message, from: getMe().id, to: currentChatName, avatar: getMe().avatar });
+	socket.emit('msg', { msg: msg, from: getMe().id, to: currentChatName, avatar: getMe().avatar });
 
 	// Empty the message input
 	$('.message-input input').val(null);
@@ -304,9 +304,13 @@ function appendMessage(data) {
 		data.msgHeader = `<b>${data.name}</b><br />`
 	}
 
+	// get this channel symmetric key to decrypt message
+	var symmetricKey = getRooms()[currentChatName].chatKey;
+	var msg = data.msg.symDecrypt(symmetricKey)
+
 	// add to self screen
 	var messagesScreen = $(".messages");
-	messagesScreen.find("ul").append(`<li class="${data.state}"><img src="${data.avatar}" title="${data.name}" /><p>${data.msgHeader}${data.msg}</p></li>`); // append message to end of page
+	messagesScreen.find("ul").append(`<li class="${data.state}"><img src="${data.avatar}" title="${data.name}" /><p>${data.msgHeader}${msg}</p></li>`); // append message to end of page
 	messagesScreen.scrollTop(messagesScreen[0].scrollHeight); // scroll to end of messages page
 }
 
@@ -327,7 +331,7 @@ function createChannel(channel, p2p) {
 
 	// my socket is admin for this channel
 	// generate symmetric key 
-	var symmetricKey = "symmetricKeyForThisRoom";
+	var symmetricKey = generateKey(50);
 	//
 	// store this room to my rooms list
 	setRooms(channel, { name: channel, p2p: p2p, chatKey: symmetricKey });
@@ -366,7 +370,7 @@ function createChannel(channel, p2p) {
 			return;
 		}
 
-		socket.emit('login', { username: name, email: email, password: pass.getHash(), pubKey: "testPubKey" });
+		socket.emit('login', { username: name, email: email, password: pass.getHash(), pubKey: keys.publicKey });
 	});
 
     /*==================================================================

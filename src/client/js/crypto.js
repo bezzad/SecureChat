@@ -58,6 +58,15 @@ String.prototype.asymDecrypt = function (privateKey) {
     return rsa.decrypt(this);
 }
 
-function setupKeys() {
-    
+function getCipherKeys() {
+    var keys = localStorage.cipherKeys; // read keys json 
+    if (keys == null) {
+        keys = generateKeyPair();
+
+        // store keys as json in localStorage
+        localStorage.cipherKeys = JSON.stringify(keys);
+        return keys;
+    }
+
+    return JSON.parse(keys);
 }
