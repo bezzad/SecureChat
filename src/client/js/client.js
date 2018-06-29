@@ -280,7 +280,7 @@ function newMessage() {
 
 	// get channel symmetric key and encrypt message
 	var chatSymmetricKey = getRooms()[currentChatName].chatKey;
-	var msg =  message.symEncrypt(chatSymmetricKey)
+	var msg = message.symEncrypt(chatSymmetricKey)
 
 	// Send the message to the chat channel
 	socket.emit('msg', { msg: msg, from: getMe().id, to: currentChatName, avatar: getMe().avatar });
@@ -338,6 +338,7 @@ function createChannel(channel, p2p) {
 
 	return true;
 }
+
 //
 //
 // 
@@ -373,15 +374,15 @@ function createChannel(channel, p2p) {
 		socket.emit('login', { username: name, email: email, password: pass.getHash(), pubKey: keys.publicKey });
 	});
 
-    /*==================================================================
-    [ Expand profile ]*/
+	/*==================================================================
+	[ Expand profile ]*/
 	$(".expand-button").click(function () {
 		$("#profile").toggleClass("expanded");
 		$("#contacts").toggleClass("expanded");
 	});
 
-    /*==================================================================
-    [ Enter send message ]*/
+	/*==================================================================
+	[ Enter send message ]*/
 	$('.submit').click(function () {
 		newMessage();
 	});
@@ -393,8 +394,8 @@ function createChannel(channel, p2p) {
 		}
 	});
 
-    /*==================================================================
-    [ Focus input ]*/
+	/*==================================================================
+	[ Focus input ]*/
 	$('.input100').each(function () {
 		$(this).on('blur', function () {
 			if ($(this).val().trim() != "") {
@@ -406,11 +407,12 @@ function createChannel(channel, p2p) {
 		})
 	})
 
-    /*==================================================================
-    [ Add channel button ]*/
+	/*==================================================================
+	[ Add channel button ]*/
 	$("#addchannel").on("click", () => {
 		var name = prompt("Please enter channel name:", "Channel");
 		if (name) {
+			name = name.replace(/ /g, "_"); // replace all space to _
 			if (createChannel(name, false)) {
 				// send data to requester user to join in current room
 				socket.emit("createChannel", name);
@@ -421,8 +423,8 @@ function createChannel(channel, p2p) {
 		}
 	})
 
-    /*==================================================================
-    [ Validate ]*/
+	/*==================================================================
+	[ Validate ]*/
 	var input = $('.validate-input .input100');
 
 	$('.validate-form').on('submit', function () {
