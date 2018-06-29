@@ -24,7 +24,8 @@ var chat = {}; // socket.io
 // the app and io instances from the app.js file:
 module.exports = function (app, io) {
     // Initialize a new socket.io application, named 'chat'
-    chat = io.on('connection', function (socket) {
+    chat = io;
+    io.on('connection', function (socket) {
         console.info(`socket: ${socket.id} connected`);
 
         // When the client emits 'login', save his name and avatar,
@@ -88,7 +89,7 @@ function userSigned(user, socket) {
 
 function updateAllUsers() {
     // tell new user added and list updated to everyone except the socket that starts it
-    chat.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRooms() });
+    chat.sockets.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRooms() });
 }
 
 function defineSocketChannels(socket) {
@@ -125,7 +126,7 @@ function defineSocketChannels(socket) {
             data.type = "msg";
             // When the server receives a message, it sends it to the other person in the room.
             //socket.broadcast.to(room.name).emit('receive', data);
-            chat.in(room.name).emit('receive', data); // send all clients, so also to sender
+            chat.sockets.in(room.name).emit('receive', data); // send all clients, so also to sender
             msg.push(data);
         }
     });
@@ -175,13 +176,13 @@ function defineSocketChannels(socket) {
                 // new p2p room
                 room = { name: data.room, p2p: true, adminUserId: from.id, users: [from.id] };
                 manager.rooms[data.room] = room;
-                socket.to(from.socketid).join(room.name); // add admin to self chat room
+                chat.sockets.connected[from.socketid].join(room.name); // add admin to self chat room
             }
             //
             // add new user to this room
             room.users.push(to.id);
-            socket.to(to.socketid).join(room.name); // add new user to chat room
-
+            chat.sockets.connected[to.socketid].join(room.name); // add new user to chat room
+        
             // send accept msg to user which requested to chat
             socket.to(to.socketid).emit("accept", { from: from.id, room: room.name, p2p: room.p2p, chatKey: data.chatKey })
         }

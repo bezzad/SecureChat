@@ -165,9 +165,10 @@ socket.on('reject', data => {
 // when a messsage sent to me or room which is I member in
 socket.on('receive', data => {
 	if (currentChatName == data.to)  // from current chat
-		addMessage(data);
+		appendMessage(data);
 	else // keep in buffer for other time view
 		data.state = "replies";
+
 	getMessages(data.to).push(data);
 });
 
@@ -319,21 +320,13 @@ function newMessage() {
 		return false;
 	}
 
-	// Send the message to the other person in the chat
-	var data = { msg: message, from: getMe().id, to: currentChatName, avatar: getMe().avatar };
-	socket.emit('msg', data);
+	// Send the message to the chat channel
+	socket.emit('msg', { msg: message, from: getMe().id, to: currentChatName, avatar: getMe().avatar });
 
 	// Empty the message input
 	$('.message-input input').val(null);
 	$('.message-input input').focus();
 };
-
-function addMessage(data) {
-	// store messages in local
-	getMessages(data.to).push(data);
-
-	appendMessage(data);
-}
 
 function appendMessage(data) {
 	if (data.from == getMe().id) {
