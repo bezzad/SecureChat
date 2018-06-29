@@ -26,7 +26,9 @@ Client side secure chat, based on [node.js](https://nodejs.org), [socket.io](htt
 
 * [**jQuery**](https://jquery.com/) is a fast, small, and feature-rich JavaScript library.
 
-* [**Forge**](https://github.com/digitalbazaar/forge#installation) is a native implementation of [TLS](http://en.wikipedia.org/wiki/Transport_Layer_Security) (and various other cryptographic tools) in [JavaScript](http://en.wikipedia.org/wiki/JavaScript).
+* [**Crypto.js**](https://github.com/brix/crypto-js) is a JavaScript library of crypto standards. Hasing and AES algorithms.
+
+* [**JSEncrypt**](https://github.com/travist/jsencrypt) is a Javascript library to perform OpenSSL RSA Encryption, Decryption, and Key Generation.
 
 * [**Local Storage**](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) is analogous to [sessionStorage](https://developer.mozilla.org/en-US/docs/Web/API/sessionStorage), with the same same-origin rules applied, but it is persistent across sessions. `localStorage` was introduced in Firefox 3.5.
 

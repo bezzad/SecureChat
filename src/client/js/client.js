@@ -1,4 +1,4 @@
-// This file is executed in the browser, when people visit /
+/* This file is executed in the browser, when people visit /   */
 "use strict";
 
 // variables which hold the data for each person
@@ -7,61 +7,27 @@ var socket = io(), // connect to the socket
 	lstRooms = null,
 	currentChatName = "",
 	roomMessages = {},
-	state = ["offline", "online"], // 0: offline, 1: online
-	sh512Hasing = forge.md.sha512.create();
+	state = ["offline", "online"]; // 0: offline, 1: online
 
 // on connection to server get the id of person's room
 socket.on("connect", () => {
 	setConnectionStatus("connected");
 	console.log(`connected by socket.id: ${socket.id}`)
 
-	setTimeout(() => {
-		if (getMe() == null) {
-			$("#loginForm").on('submit', function (e) {
-				e.preventDefault();
-
-				var name = $.trim($("#yourName").val());
-				if (name.length < 1) {
-					alert("Please enter a nick name longer than 1 character!");
-					return;
-				}
-
-				var email = $("#yourEmail").val();
-				if (email.length < 5) {
-					alert("Wrong e-mail format!");
-					return;
-				}
-
-				var pass = $("#yourPass").val();
-				if (pass.length < 2) {
-					alert("Please enter your passwrod longer than 2 character!");
-					return;
-				}
-
-				sh512Hasing.update(pass); // hasing password in sha-512
-				socket.emit('login', { username: name, email: email, password: sh512Hasing.digest().toHex(), pubKey: "testPubKey" });
-			});
-		}
-		else {
-			socket.emit('login', getMe());
-		}
-	}, 250);
+	if (getMe())
+		socket.emit('login', getMe());
 });
 
 // when me disconnected from server then changed my profile status to offline mode
-socket.on("disconnect", () => {
-	setConnectionStatus("disconnected");
-});
+socket.on("disconnect", () => setConnectionStatus("disconnected"));
 
 // on exception occurred from server call
 socket.on("exception", err => {
 	alert(err);
 });
 
-
 // save the my user data when I signed-in to server successfully
 socket.on('signed', signedin);
-
 
 // update users and rooms data when thats status changed
 socket.on('update', data => {
@@ -87,7 +53,6 @@ socket.on('update', data => {
 	}
 });
 
-
 // when a client socket disconnected or a room admin be offile
 socket.on('leave', leftedUser => {
 	var u = lstUsers[leftedUser.id];
@@ -97,7 +62,6 @@ socket.on('leave', leftedUser => {
 		$(`#${getChannelName(u.id)}`).html(getUserLink(u, chat))
 	}
 });
-
 
 // on a user requested to chat by me or join to the room which is me admin of 
 socket.on('request', data => {
@@ -132,12 +96,6 @@ socket.on('request', data => {
 	chatStarted(reqRoom.name);
 });
 
-function encryptChannelKey(room, pubKey) {
-	// encrypt that by requested user public key
-	var encSymmetricKey = room.chatKey + pubKey + "EncryptedByAnotherUserPubKey";
-	return encSymmetricKey;
-}
-
 // when my chat request accepted by channel admin
 socket.on('accept', data => {
 	console.log("room [" + data.room + "] is now open.");
@@ -147,7 +105,6 @@ socket.on('accept', data => {
 	setRooms(data.room, { name: data.room, p2p: data.p2p, chatKey: symmetricKey });
 	chatStarted(data.room);
 });
-
 
 // when my chat request rejected by channel admin
 socket.on('reject', data => {
@@ -161,7 +118,6 @@ socket.on('reject', data => {
 	$(`#${data.room}`).find(".wait").css("display", "none");
 });
 
-
 // when a messsage sent to me or room which is I member in
 socket.on('receive', data => {
 	if (currentChatName == data.to)  // from current chat
@@ -171,7 +127,6 @@ socket.on('receive', data => {
 
 	getMessages(data.to).push(data);
 });
-
 
 // when get response of my requests to fetch history of the chat messages
 socket.on('fetch-messages', data => {
@@ -191,6 +146,13 @@ socket.on('error', function () {
 // ------------------------------------ utilitie functions -------------------------------------
 // 
 //
+
+function encryptChannelKey(room, pubKey) {
+	// encrypt that by requested user public key
+	var encSymmetricKey = room.chatKey + pubKey + "EncryptedByAnotherUserPubKey";
+	return encSymmetricKey;
+}
+
 function reqChatBy(chat) {
 	$(`#${chat}`).find(".wait").css("display", "block");
 	var room = getRooms()[chat];
@@ -380,6 +342,32 @@ function createChannel(channel, p2p) {
 //
 (function ($) {
 	"use strict";
+
+	/*==================================================================
+	[ Submit login form ]*/
+	$("#loginForm").on('submit', function (e) {
+		e.preventDefault();
+
+		var name = $.trim($("#yourName").val());
+		if (name.length < 1) {
+			alert("Please enter a nick name longer than 1 character!");
+			return;
+		}
+
+		var email = $("#yourEmail").val();
+		if (email.length < 5) {
+			alert("Wrong e-mail format!");
+			return;
+		}
+
+		var pass = $("#yourPass").val();
+		if (pass.length < 2) {
+			alert("Please enter your passwrod longer than 2 character!");
+			return;
+		}
+
+		socket.emit('login', { username: name, email: email, password: pass.getHash(), pubKey: "testPubKey" });
+	});
 
     /*==================================================================
     [ Expand profile ]*/
