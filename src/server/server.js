@@ -21,6 +21,7 @@ var crypto = require("crypto-js");
 var serverVersion = manager.generateGuid(); // a unique version for every startup of server
 var globalChannel = "environment"; // add any authenticated user to this channel
 var chat = {}; // socket.io
+var loginExpireTime = 10 * 1000; // 3600sec
 
 // Export a function, so that we can pass 
 // the app and io instances from the app.js file:
@@ -33,19 +34,20 @@ module.exports = function (app, io) {
         // When the client emits 'login', save his name and avatar,
         // and add them to the channel
         socket.on('login', data => {
+            // check login password from decrypt cipher by nonce password (socket.id)
+            var userHashedPass = crypto.TripleDES.decrypt(data.password, socket.id).toString(crypto.enc.Utf8);
+
             var user = manager.clients[data.email.hashCode()];
-            if (user) { // exist user
-                // check login password from decrypt cipher by nonce password (socket.id)
-                var userHashedPass = crypto.TripleDES.decrypt(data.password, socket.id).toString(crypto.enc.Utf8);
-                if (user.password === userHashedPass) {
+            if (user) { // exist user                
+                if (user.password == userHashedPass) {
                     // check user sign expiration
-                    if (user.lastLoginDate + 3600000 > Date.now()) { // expire after 60min
-                        user.lastLoginDate = Date.now();
+                    if (user.lastLoginDate + loginExpireTime > Date.now()) { // expire after 60min
                         userSigned(user, socket);
                     }
                     else {
                         socket.emit("resign");
                     }
+                    user.lastLoginDate = Date.now(); // update user login time
                 }
                 else { // exist user, entry password is incorrect
                     socket.emit("exception", "The username or password is incorrect!");
@@ -60,11 +62,10 @@ module.exports = function (app, io) {
                     "id": data.email.hashCode(), // unique for this email
                     "username": data.username, // display name, maybe not unique
                     "email": data.email, // unique email address for any users                                       
-                    "password": data.password, // Store Password Hashing for client login to authenticate one user per email
+                    "password": userHashedPass, // Store Password Hashing for client login to authenticate one user per email
                     "avatar": gravatar.url(data.email, { s: '140', r: 'x', d: 'mm' }), // user avatar picture's
                     "status": "online", // { "online", "offline" }
-                    "serverVersion": serverVersion, // chance of this version caused to refresh clients cached data
-                    "lastLoginDate": Date.now() // las login time accourding by server time
+                    "lastLoginDate": Date.now() // last login time accourding by server time
                 };
                 manager.clients[user.id] = user;
                 userSigned(user, socket);
@@ -82,7 +83,14 @@ function userSigned(user, socket) {
     socket.user = user;
     //
     // send success ack to user by self data object
-    socket.emit("signed", user);
+    socket.emit("signed", {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "avatar": user.avatar,
+        "status": user.status,
+        "serverVersion": serverVersion, // chance of this version caused to refresh clients cached data
+    });
 
     socket.join(globalChannel); // join all users in global authenticated group
 

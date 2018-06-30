@@ -31,8 +31,8 @@ var generateKeyPair = function () {
 };
 
 // hasing text by sha-512 algorithm
-String.prototype.getHash = function (text) {
-    return CryptoJS.SHA512(text).toString();
+String.prototype.getHash = function () {
+    return CryptoJS.SHA512(this).toString();
 }
 
 // symmetric 3DES encryption

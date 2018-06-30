@@ -16,9 +16,9 @@ socket.on("connect", () => {
 	console.log(`connected by socket.id: ${socket.id}`)
 	setConnectionStatus("connected");
 	var me = getMe();
-	if (me) {
-		// nonce password by socket.id
-		me.password = me.password.symEncrypt(socket.id);
+	if (me && localStorage.hashedPass) {
+		// nonce password
+		me.password = getNoncePassword(localStorage.hashedPass);
 		socket.emit('login', me);
 	}
 });
@@ -368,6 +368,11 @@ function createChannel(channel, p2p) {
 	return true;
 }
 
+// create nonce password by socket.id
+function getNoncePassword(pass) {
+	return pass.symEncrypt(socket.id);
+}
+
 //
 //
 // 
@@ -376,31 +381,6 @@ function createChannel(channel, p2p) {
 //
 (function ($) {
 	"use strict";
-
-	/*==================================================================
-	[ Submit login div ]*/
-	$("#loginButton").on('click', () => {
-
-		var name = $.trim($("#yourName").val());
-		if (name.length < 1) {
-			alert("Please enter a nick name longer than 1 character!");
-			return;
-		}
-
-		var email = $("#yourEmail").val();
-		if (email.length < 5) {
-			alert("Wrong e-mail format!");
-			return;
-		}
-
-		var pass = $("#yourPass").val();
-		if (pass.length < 2) {
-			alert("Please enter your passwrod longer than 2 character!");
-			return;
-		}
-
-		socket.emit('login', { username: name, email: email, password: pass.getHash() });
-	});
 
 	/*==================================================================
 	[ Expand profile ]*/
@@ -462,9 +442,10 @@ function createChannel(channel, p2p) {
 	[ Validate ]*/
 	var input = $('.validate-input .input100');
 
-	$('.validate-form').on('submit', function () {
+	// Submit login div 
+	$("#loginButton").on('click', () => {
+		// validation data
 		var check = true;
-
 		for (var i = 0; i < input.length; i++) {
 			if (validate(input[i]) == false) {
 				showValidate(input[i]);
@@ -472,9 +453,15 @@ function createChannel(channel, p2p) {
 			}
 		}
 
-		return check;
+		if (check) { // if login data is valid then:
+			var name = $.trim($("#yourName").val());
+			var email = $("#yourEmail").val();
+			var pass = $("#yourPass").val();
+			localStorage.hashedPass = pass.getHash(); // store my login password by hashing
+			var noncePass = getNoncePassword(localStorage.hashedPass);
+			socket.emit('login', { username: name, email: email, password: noncePass });
+		}
 	});
-
 
 	$('.validate-form .input100').each(function () {
 		$(this).focus(function () {
