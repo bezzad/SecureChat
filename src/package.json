@@ -15,6 +15,7 @@
   "author": "Elham Estedlali <e.estedlali@gmail.com>",
   "license": "GNU",
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^5.1.0",
     "ejs": "^1.0.0",
     "express": "^4.16.3",
     "gravatar": "^1.0.6",

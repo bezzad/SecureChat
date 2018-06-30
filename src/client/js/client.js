@@ -349,9 +349,8 @@ function createChannel(channel, p2p) {
 	"use strict";
 
 	/*==================================================================
-	[ Submit login form ]*/
-	$("#loginForm").on('submit', function (e) {
-		e.preventDefault();
+	[ Submit login div ]*/
+	$("#loginButton").on('click', () => {	
 
 		var name = $.trim($("#yourName").val());
 		if (name.length < 1) {
