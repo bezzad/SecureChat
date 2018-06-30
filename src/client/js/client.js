@@ -250,7 +250,7 @@ function signedin(me) {
 	$("#profile-img").attr("src", me.avatar);
 	$("#myUsername").html(me.username);
 	$("#myEmail").val(me.email);
-	$(".limiter").css("display", "none");
+	$(".limiter").remove();
 	$("#frame").css("display", "block");
 }
 
