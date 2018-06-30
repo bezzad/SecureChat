@@ -21,7 +21,7 @@ var crypto = require("crypto-js");
 var serverVersion = manager.generateGuid(); // a unique version for every startup of server
 var globalChannel = "environment"; // add any authenticated user to this channel
 var chat = {}; // socket.io
-var loginExpireTime = 10 * 1000; // 3600sec
+var loginExpireTime = 3600 * 1000; // 3600sec
 
 // Export a function, so that we can pass 
 // the app and io instances from the app.js file:
