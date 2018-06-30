@@ -8,16 +8,17 @@
 //      error               on system error
 //      login               on user request to login by user and password
 //      signed              on user successfull signed in to application
-//      update              on update users and rooms list to all users
-//      msg                 on send or receive message in room or private socket
+//      update              on update users and channels list to all users
+//      msg                 on send or receive message in channel
 //      exception           on get an error to users
 //      typing              on a user typing some thing in message text box
+//      resign              on user sign-in expiration
 
 // Use the gravatar module, to turn email addresses into avatar images:
 var gravatar = require('gravatar');
 var manager = require('./manager.js');
 var serverVersion = manager.generateGuid(); // a unique version for every startup of server
-var globalRoom = "environment"; // add any authenticated user to this room
+var globalChannel = "environment"; // add any authenticated user to this channel
 var chat = {}; // socket.io
 
 // Export a function, so that we can pass 
@@ -29,7 +30,7 @@ module.exports = function (app, io) {
         console.info(`socket: ${socket.id} connected`);
 
         // When the client emits 'login', save his name and avatar,
-        // and add them to the room
+        // and add them to the channel
         socket.on('login', data => {
 
             var user = manager.clients[data.email.hashCode()];
@@ -40,21 +41,28 @@ module.exports = function (app, io) {
                     "socketid": socket.id, // just solid for this connection and changed for another connecting times
                     "id": data.email.hashCode(), // unique for this email
                     "username": data.username, // display name, maybe not unique
-                    "email": data.email, // unique email address for any users
-                    "pubKey": data.pubKey, // public key of this client asymmetric cipher's                    
+                    "email": data.email, // unique email address for any users                                       
                     "password": data.password, // Store Password Hashing for client login to authenticate one user per email
                     "avatar": gravatar.url(data.email, { s: '140', r: 'x', d: 'mm' }), // user avatar picture's
                     "status": "online", // { "online", "offline" }
-                    "serverVersion": serverVersion // chance of this version caused to refresh clients cached data
+                    "serverVersion": serverVersion, // chance of this version caused to refresh clients cached data
+                    "lastLoginDate": Date.now() // las login time accourding by server time
                 };
                 manager.clients[user.id] = user;
                 userSigned(user, socket);
             }
             else if (user.password === data.password) { // exist user, check login password
-                userSigned(user, socket);
+                // check user sign expiration
+                if (user.lastLoginDate + 3600000 > Date.now()) { // expire after 60min
+                    user.lastLoginDate = Date.now();
+                    userSigned(user, socket);
+                }
+                else {
+                    socket.emit("resign");
+                }
             }
             else { // exist user, entry password is incorrect
-                socket.emit("exception", "The username is already exist, but your password is incorrect!");
+                socket.emit("exception", "The username or password is incorrect!");
                 console.info(`User <${user.username}> can't login, because that password is incorrect!`);
             }
 
@@ -66,19 +74,19 @@ module.exports = function (app, io) {
 
 
 function userSigned(user, socket) {
-    user.status = manager.status[1];
+    user.status = "online";
     user.socketid = socket.id;
     socket.user = user;
     //
     // send success ack to user by self data object
     socket.emit("signed", user);
 
-    socket.join(globalRoom); // join all users in global authenticated group
+    socket.join(globalChannel); // join all users in global authenticated group
 
-    // add user to all joined rooms
-    var userRooms = manager.getUserRooms(user.id, true); // by p2p rooms
-    for (var room in userRooms) {
-        socket.join(room);
+    // add user to all joined channels
+    var userChannels = manager.getUserChannels(user.id, true); // by p2p channel
+    for (var channel in userChannels) {
+        socket.join(channel);
     }
 
     updateAllUsers();
@@ -89,13 +97,13 @@ function userSigned(user, socket) {
 
 function updateAllUsers() {
     // tell new user added and list updated to everyone except the socket that starts it
-    chat.sockets.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRooms() });
+    chat.sockets.in(globalChannel).emit("update", { users: manager.getUsers(), channels: manager.getChannels() });
 }
 
 function createChannel(name, user, p2p) {
     var channel = { name: name, p2p: p2p, adminUserId: user.id, status: "online", users: [user.id] };
-    manager.rooms[name] = channel;
-    chat.sockets.connected[user.socketid].join(name); // add admin to self chat room
+    manager.channels[name] = channel;
+    chat.sockets.connected[user.socketid].join(name); // add admin to self chat
     return channel;
 }
 
@@ -108,13 +116,13 @@ function defineSocketChannels(socket) {
 
         // find user who abandon sockets
         var user = socket.user || manager.findUser(socket.id);
-        if (user !== null) {
-            user.status = manager.status[0]; // offline
+        if (user) {
             console.warn(`User <${user.username}> by socket <${user.socketid}> disconnected!`);
+            user.status = "offline";
 
-            // Notify the other person in the chat room
+            // Notify the other person in the chat channel
             // that his partner has left
-            socket.broadcast.to(globalRoom).emit('leave',
+            socket.broadcast.to(globalChannel).emit('leave',
                 { username: user.username, id: user.id, avatar: user.avatar, status: user.status });
         }
     });
@@ -122,18 +130,17 @@ function defineSocketChannels(socket) {
     // Handle the sending of messages
     socket.on("msg", data => {
         var from = socket.user || manager.findUser(socket.id);
-        var room = manager.rooms[data.to];
+        var channel = manager.channels[data.to];
 
-        if (from != null && room != null && room.users.indexOf(from.id) != -1) {
-            var msg = manager.messages[room.name];
+        if (from != null && channel != null && channel.users.indexOf(from.id) != -1) {
+            var msg = manager.messages[channel.name];
             if (msg == null)
-                msg = manager.messages[room.name] = [];
+                msg = manager.messages[channel.name] = [];
 
             data.date = Date.now();
             data.type = "msg";
-            // When the server receives a message, it sends it to the other person in the room.
-            //socket.broadcast.to(room.name).emit('receive', data);
-            chat.sockets.in(room.name).emit('receive', data); // send all clients, so also to sender
+            // When the server receives a message, it sends it to the all clients, so also to sender
+            chat.sockets.in(channel.name).emit('receive', data);
             msg.push(data);
         }
     });
@@ -145,24 +152,25 @@ function defineSocketChannels(socket) {
         var from = socket.user || manager.findUser(socket.id);
 
         // if user authenticated 
-        if (from != null) {
+        if (from) {
+            data.from = from.id; // inject user id in data
 
             // find admin user who should be send request to
-            var adminUser = manager.getAdminFromChatName(data.room, from.id)
+            var adminUser = manager.getAdminFromChannelName(data.channel, from.id)
 
-            if (adminUser != null) {
-                if (adminUser.status == manager.status[0]) { // offline admin   
-                    var p2p = (manager.rooms[data.room] == null ? true : manager.rooms[data.room].p2p);
-                    socket.emit("reject", { from: adminUser.id, room: data.room, p2p: p2p, msg: "admin user is offline" });
+            if (adminUser) {
+                if (adminUser.status == "offline") {
+                    var p2p = (manager.channels[data.channel] == null ? true : manager.channels[data.channel].p2p);
+                    socket.emit("reject", { from: adminUser.id, channel: data.channel, p2p: p2p, msg: "admin user is offline" });
                 }
                 else
-                    chat.to(adminUser.socketid).emit("request", { from: from.id, pubKey: from.pubKey, room: data.room })
+                    chat.to(adminUser.socketid).emit("request", data)
                 return;
             }
         }
         //
         // from or adminUser is null
-        socket.emit("exception", "The requested chat room not found!");
+        socket.emit("exception", "The requested chat not found!");
     });
 
     // Handle the request of users for chat
@@ -176,30 +184,30 @@ function defineSocketChannels(socket) {
 
         // if users authenticated 
         if (from != null && to != null) {
-            var channel = manager.rooms[data.room];
+            var channel = manager.channels[data.channel];
 
             if (channel == null) {
                 // new p2p channel
-                channel = createChannel(data.room, from, true)
+                channel = createChannel(data.channel, from, true)
             }
             //
-            // add new user to this room
+            // add new user to this channel
             channel.users.push(to.id);
-            chat.sockets.connected[to.socketid].join(channel.name); // add new user to chat room
+            chat.sockets.connected[to.socketid].join(channel.name); // add new user to chat channel
 
             // send accept msg to user which requested to chat
-            socket.to(to.socketid).emit("accept", { from: from.id, room: channel.name, p2p: channel.p2p, chatKey: data.chatKey })
+            socket.to(to.socketid).emit("accept", { from: from.id, channel: channel.name, p2p: channel.p2p, channelKey: data.channelKey })
         }
     });
 
     // Handle the request to create channel
     socket.on("createChannel", name => {
         var from = socket.user;
-        var channel = manager.rooms[name];
+        var channel = manager.channels[name];
 
         if (channel) {
             // the given channel name is already exist!
-            socket.emit("reject", { from: from.id, p2p: false, room: channel, msg: "The given channel name is already exist" })
+            socket.emit("reject", { from: from.id, p2p: false, channel: channel, msg: "The given channel name is already exist" })
             return;
         }
 
@@ -222,8 +230,8 @@ function defineSocketChannels(socket) {
 
         // if users authenticated 
         if (from != null && to != null) {
-            var room = manager.rooms[data.room];
-            socket.to(to.socketid).emit("reject", { from: from.id, p2p: (room == null), room: data.room })
+            var channel = manager.channels[data.channel];
+            socket.to(to.socketid).emit("reject", { from: from.id, p2p: (channel == null), channel: data.channel })
         }
     });
 
@@ -232,13 +240,13 @@ function defineSocketChannels(socket) {
         // find fetcher user
         var fetcher = socket.user || manager.findUser(socket.id);
 
-        var room = manager.rooms[data];
+        var channel = manager.channels[data];
 
-        // check fetcher was a user of room
-        if (fetcher != null && room != null && room.users.indexOf(fetcher.id) !== -1)
-            socket.emit("fetch-messages", { room: room.name, messages: manager.messages[room.name] });
+        // check fetcher was a user of channel
+        if (fetcher != null && channel != null && channel.users.indexOf(fetcher.id) !== -1)
+            socket.emit("fetch-messages", { channel: channel.name, messages: manager.messages[channel.name] });
         else
-            socket.emit("exception", `you are not join on <${data}> room or meybe the server lost your data!!!`);
+            socket.emit("exception", `you are not joined in <${data}> channel or maybe the server was lost your data!!!`);
     });
 
 } // defineSocketChannels

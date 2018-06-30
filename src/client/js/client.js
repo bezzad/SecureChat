@@ -4,23 +4,34 @@
 // variables which hold the data for each person
 var socket = io(), // connect to the socket
 	lstUsers = null,
-	lstRooms = null,
-	currentChatName = "",
-	roomMessages = {},
+	lstChannels = null,
+	currentChannelName = "",
+	channelMessages = {},
+	channels = null,
 	state = ["offline", "online"], // 0: offline, 1: online
 	keys = getCipherKeys();
 
-// on connection to server get the id of person's room
+// on connection to server get the id of person's channel
 socket.on("connect", () => {
-	setConnectionStatus("connected");
 	console.log(`connected by socket.id: ${socket.id}`)
+	setConnectionStatus("connected");
+	if (getMe()) socket.emit('login', getMe());
+});
 
-	if (getMe())
-		socket.emit('login', getMe());
+// when me sign-in was expired from server time
+socket.on("resign", () => {
+	var me = getMe();
+	$(".login100-form-title").html("Login");
+	$("#yourName").val(me.username);
+	$("#yourEmail").val(me.email);
+	$("#yourAvatar").attr("src", me.avatar);
 });
 
 // when me disconnected from server then changed my profile status to offline mode
-socket.on("disconnect", () => setConnectionStatus("disconnected"));
+socket.on("disconnect", () => {
+	console.warn(`socket <${getMe().socketid}> disconnected!`);
+	setConnectionStatus("disconnected");
+});
 
 // on exception occurred from server call
 socket.on("exception", err => {
@@ -30,10 +41,10 @@ socket.on("exception", err => {
 // save the my user data when I signed-in to server successfully
 socket.on('signed', signedin);
 
-// update users and rooms data when thats status changed
+// update users and channels data when thats status changed
 socket.on('update', data => {
 	lstUsers = data.users;
-	lstRooms = data.rooms;
+	lstChannels = data.channels;
 	$("#userContacts").empty();
 	$("#channelContacts").empty();
 
@@ -44,17 +55,17 @@ socket.on('update', data => {
 		$("#userContacts").append("<li id='" + channel + "' class='contact'>" + getUserLink(user, channel) + "</li>");
 	}
 
-	for (var prop in lstRooms) {
-		var room = lstRooms[prop];
-		$("#channelContacts").append("<li id='" + room.name + "' class='contact'>" + getChannelLink(room) + "</li>")
+	for (var prop in lstChannels) {
+		var channel = lstChannels[prop];
+		$("#channelContacts").append("<li id='" + channel.name + "' class='contact'>" + getChannelLink(channel) + "</li>")
 	};
 
-	if (currentChatName != null && currentChatName.length > 0) {
-		chatStarted(currentChatName);
+	if (currentChannelName != null && currentChannelName.length > 0) {
+		chatStarted(currentChannelName);
 	}
 });
 
-// when a client socket disconnected or a room admin be offile
+// when a client socket disconnected or a channel admin be offline
 socket.on('leave', leftedUser => {
 	var u = lstUsers[leftedUser.id];
 	if (u != null) {
@@ -64,49 +75,49 @@ socket.on('leave', leftedUser => {
 	}
 });
 
-// on a user requested to chat by me or join to the room which is me admin of 
+// on a user requested to chat by me or join to the channel which is me admin of 
 socket.on('request', data => {
 	var reqUser = lstUsers[data.from];
 	if (reqUser == null) {
-		socket.emit("reject", { to: data.from, room: data.room, msg: "I don't know who requested!" });
+		socket.emit("reject", { to: data.from, channel: data.channel, msg: "I don't know who requested!" });
 		return; // incorrect request from
 	}
 
-	var reqRoom = getRooms()[data.room];
+	var reqChannel = getChannels()[data.channel];
 
-	if (reqRoom == null) {  // dose not exist in room list, so it's a new p2p room!
+	if (reqChannel == null) {  // dose not exist in channel list, so it's a new p2p channel!
 		// ask me to accept or reject user request
 		if (confirm(`Do you allow <${reqUser.username}> to chat with you?`) == false) {
-			socket.emit("reject", { to: data.from, room: data.room });
+			socket.emit("reject", { to: data.from, channel: data.channel });
 			return;
 		}
 		// wow, accepted...
-		createChannel(data.room, true);
-		reqRoom = getRooms()[data.room];
+		createChannel(data.channel, true);
+		reqChannel = getChannels()[data.channel];
 	}
-	else if (reqRoom.p2p === false) {
+	else if (reqChannel.p2p === false) {
 		// ask me to accept or reject user request
-		if (confirm(`Do you allow <${reqUser.username}> to join in <${reqRoom.name}> room?`) == false) {
-			socket.emit("reject", { to: data.from, room: data.room });
+		if (confirm(`Do you allow <${reqUser.username}> to join in <${reqChannel.name}> channel?`) == false) {
+			socket.emit("reject", { to: data.from, channel: data.channel });
 			return;
 		}
 	}
 	// encrypt the chat symmetricKey by requested user public key
-	var encryptedChannelKey = reqRoom.chatKey.asymEncrypt(data.pubKey)
+	var encryptedChannelKey = reqChannel.channelKey.asymEncrypt(data.pubKey)
 	//
-	// send data to requester user to join in current room
-	socket.emit("accept", { to: data.from, chatKey: encryptedChannelKey, room: reqRoom.name })
-	chatStarted(reqRoom.name);
+	// send data to requester user to join in current channel
+	socket.emit("accept", { to: data.from, channelKey: encryptedChannelKey, channel: reqChannel.name })
+	chatStarted(reqChannel.name);
 });
 
 // when my chat request accepted by channel admin
 socket.on('accept', data => {
 	// decrypt RSA cipher by my pricate key
-	var symmetricKey = data.chatKey.asymDecrypt(keys.privateKey);
+	var symmetricKey = data.channelKey.asymDecrypt(keys.privateKey);
 	//
-	// store this room to my rooms list
-	setRooms(data.room, { name: data.room, p2p: data.p2p, chatKey: symmetricKey });
-	chatStarted(data.room);
+	// store this channel to my channels list
+	setChannel(data.channel, { name: data.channel, p2p: data.p2p, channelKey: symmetricKey });
+	chatStarted(data.channel);
 });
 
 // when my chat request rejected by channel admin
@@ -116,14 +127,14 @@ socket.on('reject', data => {
 	if (data.p2p)
 		alert(`Your request to chat by <${admin.username}> rejected. ${reason}`);
 	else
-		alert(`Your join request to <${data.room}> channel rejected. ${reason}`);
+		alert(`Your join request to <${data.channel}> channel rejected. ${reason}`);
 
-	$(`#${data.room}`).find(".wait").css("display", "none");
+	$(`#${data.channel}`).find(".wait").css("display", "none");
 });
 
-// when a messsage sent to me or room which is I member in
+// when a messsage sent to me or channel which is I member in
 socket.on('receive', data => {
-	if (currentChatName == data.to)  // from current chat
+	if (currentChannelName == data.to)  // from current chat
 		appendMessage(data);
 	else {
 		// keep in buffer for other time view
@@ -143,7 +154,7 @@ socket.on('receive', data => {
 socket.on('fetch-messages', data => {
 	if (data.messages == null)
 		data.messages == []; // set to un-null to except next time requests
-	roomMessages[data.room] = data.messages;
+	channelMessages[data.channel] = data.messages;
 	updateMessages();
 });
 
@@ -157,19 +168,20 @@ socket.on('error', function () {
 // ------------------------------------ utilitie functions -------------------------------------
 // 
 //
-function reqChatBy(chat) {
-	$(`#${chat}`).find(".wait").css("display", "block");
-	var room = getRooms()[chat];
-	if (room == null) {
-		socket.emit("request", { room: chat });
+function reqChatBy(name) {
+	$(`#${name}`).find(".wait").css("display", "block");
+	var channel = getChannels()[name];
+
+	if (channel && channel.channelKey) { // me already joined in chat
+		chatStarted(name);
 	}
-	else { // me already joined in chat
-		chatStarted(chat);
+	else {
+		socket.emit("request", { channel: name, pubKey: keys.publicKey });
 	}
 }
 
-function getUserLink(user, chat) {
-	return `<div class='wrap' onclick='reqChatBy("${chat}")'>
+function getUserLink(user, channel) {
+	return `<div class='wrap' onclick='reqChatBy("${channel}")'>
 				<span class='contact-status ${user.status}'></span>
 				<img src='${user.avatar}' />
 				<div class='wait'></div>
@@ -179,13 +191,12 @@ function getUserLink(user, chat) {
 			</div>`;
 }
 
-function getChannelLink(room) {
-	return `<div class='wrap' onclick='reqChatBy("${room.name}")'>
-				<span class='contact-status ${room.status}'></span>
+function getChannelLink(channel) {
+	return `<div class='wrap' onclick='reqChatBy("${channel.name}")'>				
 				<img src='img/channel.png' />
 				<div class='wait'></div>
 				<div class='meta'>
-					<p class='name badge' data-badge=''>${room.name}</p>
+					<p class='name badge' data-badge=''>${channel.name}</p>
 				</div>
 			</div>`;
 }
@@ -195,28 +206,32 @@ function getChannelName(userid) {
 	return `${ids[0]}_${ids[1]}`; // unique name for this users private 
 }
 
-function setRooms(name, room) {
-	var rooms = getRooms();
-	rooms[name] = room;
-	localStorage.rooms = JSON.stringify(rooms);
+// set channels thread safe
+function setChannel(name, channel) {
+	getChannels()[name] = channel;
+	localStorage.channels = JSON.stringify(getChannels());
 }
 
-function getRooms() {
-	var rooms = localStorage.rooms;
-	if (rooms == null) {
-		localStorage.rooms = "{}"; // store string of object
-		return {};
+function getChannels() {
+	if (channels)
+		return channels;
+
+	if (localStorage.channels)
+		channels = JSON.parse(localStorage.channels)
+	else {
+		channels = {};
+		localStorage.channels = "{}"; // store string of object
 	}
 
-	return JSON.parse(rooms);
+	return channels;
 }
 
 function setMe(data) {
 	var lastMe = getMe();
 
-	if (lastMe != null && lastMe.serverVersion !== data.serverVersion) {
+	if (lastMe && lastMe.serverVersion !== data.serverVersion) {
 		// server restarted, so refresh cached data
-		localStorage.rooms = "{}";
+		localStorage.channels = "{}";
 	}
 	localStorage.me = JSON.stringify(data);
 }
@@ -241,7 +256,7 @@ function setConnectionStatus(state) {
 }
 
 function chatStarted(channel) {
-	currentChatName = channel;
+	currentChannelName = channel;
 	$("li").removeClass("active");
 	var contact = $(`#${channel}`);
 	contact.addClass("active");
@@ -254,8 +269,9 @@ function chatStarted(channel) {
 }
 
 function signedin(me) {
-	me.lastLoginDate = Date.now();
+	console.info(`I signed-in by socket <${me.socketid}>`);
 	setMe(me);
+	$("title").html(`Secure Chat - ${me.username}`)
 	$("#profile-img").attr("src", me.avatar);
 	$("#myUsername").html(me.username);
 	$("#myEmail").val(me.email);
@@ -265,8 +281,7 @@ function signedin(me) {
 
 function updateMessages() {
 	// show old messages
-	var messages = getMessages(currentChatName);
-	var room = getRooms()[currentChatName];
+	var messages = getMessages(currentChannelName);
 
 	// add all messages to screen
 	var lstMessagesDom = $('.messages ul');
@@ -282,17 +297,17 @@ function newMessage() {
 		return false;
 	}
 
-	if (currentChatName == null || currentChatName == '') {
+	if (currentChannelName == null || currentChannelName == '') {
 		alert("Please first select a chat to sending message!");
 		return false;
 	}
 
 	// get channel symmetric key and encrypt message
-	var chatSymmetricKey = getRooms()[currentChatName].chatKey;
+	var chatSymmetricKey = getChannels()[currentChannelName].channelKey;
 	var msg = message.symEncrypt(chatSymmetricKey)
 
 	// Send the message to the chat channel
-	socket.emit('msg', { msg: msg, from: getMe().id, to: currentChatName, avatar: getMe().avatar });
+	socket.emit('msg', { msg: msg, from: getMe().id, to: currentChannelName, avatar: getMe().avatar });
 
 	// Empty the message input
 	$('.message-input input').val(null);
@@ -309,12 +324,12 @@ function appendMessage(data) {
 	}
 
 	data.msgHeader = "";
-	if (lstRooms[data.to]) { // if is a real channel
+	if (lstChannels[data.to]) { // if is a real channel
 		data.msgHeader = `<b>${data.name}</b><br />`
 	}
 
 	// get this channel symmetric key to decrypt message
-	var symmetricKey = getRooms()[currentChatName].chatKey;
+	var symmetricKey = getChannels()[currentChannelName].channelKey;
 	var msg = data.msg.symDecrypt(symmetricKey)
 
 	// add to self screen
@@ -323,11 +338,11 @@ function appendMessage(data) {
 	messagesScreen.scrollTop(messagesScreen[0].scrollHeight); // scroll to end of messages page
 }
 
-function getMessages(room) {
-	var msgArray = roomMessages[room];
+function getMessages(channel) {
+	var msgArray = channelMessages[channel];
 	if (msgArray == null) {
 		// fetch from server
-		socket.emit("fetch-messages", room);
+		socket.emit("fetch-messages", channel);
 		return [];
 	}
 	else
@@ -335,15 +350,15 @@ function getMessages(room) {
 }
 
 function createChannel(channel, p2p) {
-	if (lstRooms[channel])
+	if (lstChannels[channel])
 		return false;
 
 	// my socket is admin for this channel
 	// generate symmetric key 
 	var symmetricKey = generateKey(50);
 	//
-	// store this room to my rooms list
-	setRooms(channel, { name: channel, p2p: p2p, chatKey: symmetricKey });
+	// store this channel to my channels list
+	setChannel(channel, { name: channel, p2p: p2p, channelKey: symmetricKey });
 
 	return true;
 }
@@ -379,7 +394,7 @@ function createChannel(channel, p2p) {
 			return;
 		}
 
-		socket.emit('login', { username: name, email: email, password: pass.getHash(), pubKey: keys.publicKey });
+		socket.emit('login', { username: name, email: email, password: pass.getHash() });
 	});
 
 	/*==================================================================
@@ -390,7 +405,7 @@ function createChannel(channel, p2p) {
 	});
 
 	/*==================================================================
-	[ Enter send message ]*/
+	[ Press Enter to send message ]*/
 	$('.submit').click(function () {
 		newMessage();
 	});
@@ -398,7 +413,14 @@ function createChannel(channel, p2p) {
 	$(window).on('keydown', function (e) {
 		if (e.which == 13) {
 			newMessage();
-			return false;
+		}
+	});
+
+	/*==================================================================
+	[ Press Enter to login ]*/
+	$(".validate-input").on('keydown', function (e) {
+		if (e.which == 13) {
+			$("#loginButton").click();
 		}
 	});
 
@@ -422,7 +444,7 @@ function createChannel(channel, p2p) {
 		if (name) {
 			name = name.replace(/ /g, "_"); // replace all space to _
 			if (createChannel(name, false)) {
-				// send data to requester user to join in current room
+				// send data to requester user to join in current channel
 				socket.emit("createChannel", name);
 			}
 			else {

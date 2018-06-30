@@ -3,9 +3,8 @@ module.exports = e;
 
 e.clients = {}; // property: id, value: { socketid, id, username, email, pubKey, password, avatar, status }
 e.messageTypes = ["ack", "request", "message", "symmetricKey"];
-e.messages = {}; // property: roomName, value { from, to, date, type }
-e.rooms = {}; // property: roomName, value: { name, p2p, adminUserId, users[] },
-e.status = ["offline", "online"]; // 0: offline, 1: online
+e.messages = {}; // property: channelName, value { from, to, date, type }
+e.channels = {}; // property: channelName, value: { name, p2p, adminUserId, users[] }
 
 // generate 16 char length GUID
 e.generateGuid = function () {
@@ -39,29 +38,29 @@ e.getUsers = function () {
     return users;
 }
 
-e.getUserRooms = function (userId, byP2p = false) {
-    var userRooms = {};
+e.getUserChannels = function (userId, byP2p = false) {
+    var userChannels = {};
     if (userId) {
-        for (prop in e.rooms) {
-            var r = e.rooms[prop];
+        for (prop in e.channels) {
+            var r = e.channels[prop];
             if (r.users.indexOf(userId) !== -1) {
                 if ((byP2p === false && r.p2p === false) || byP2p === true)
-                    userRooms[prop] = r;
+                    userChannels[prop] = r;
             }
         }
     }
-    return userRooms;
+    return userChannels;
 }
 
-e.getRooms = function () {
-    var lstRooms = {};
-    for (prop in e.rooms) {
-        var r = e.rooms[prop];
+e.getChannels = function () {
+    var lstChannels = {};
+    for (prop in e.channels) {
+        var r = e.channels[prop];
         if (r.p2p === false) {
-            lstRooms[prop] = r;
+            lstChannels[prop] = r;
         }
     }
-    return lstRooms;
+    return lstChannels;
 }
 
 e.findUser = function (socketid) {
@@ -74,32 +73,31 @@ e.findUser = function (socketid) {
     return null; // user not found
 }
 
-e.generateChatRoomName = function (uid0, uid1) {
+e.generateChannelName = function (uid0, uid1) {
     var ids = [uid0, uid1].sort();
     return ids[0] + "_" + ids[1]; // unique name for this users private 
 }
 
-e.getAdminFromChatName = function (chatName, userid) {
-
+e.getAdminFromChannelName = function (channelName, userid) {
     var admin = null;
 
-    // find room to send client request
-    var room = e.rooms[chatName];
+    // find channel to send client request
+    var channel = e.channels[channelName];
 
-    if (room == null) { // requested to new p2p chat
-        var halfIndex = chatName.indexOf("_");
+    if (channel == null) { // requested to new p2p channel
+        var halfIndex = channelName.indexOf("_");
         if (halfIndex < 1)
-            return null; // p2p chat name incorrect
+            return null; // p2p channel name incorrect
 
-        var u0 = chatName.substring(0, halfIndex);
-        var u1 = chatName.substring(halfIndex + 1);
+        var u0 = channelName.substring(0, halfIndex);
+        var u1 = channelName.substring(halfIndex + 1);
 
         admin = (u0 === userid)
             ? e.clients[u1] // u1 is admin id
             : admin = e.clients[u0];  // u0 is admin id
     }
     else
-        admin = e.clients[room.adminUserId];
+        admin = e.clients[channel.adminUserId];
 
     return admin;
 }

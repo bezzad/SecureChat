@@ -152,6 +152,10 @@ button.login100-form-btn:hover {
   margin: 0 auto;
 }
 
+.login100-form-logo img {
+  border-radius: 50%;
+}
+
 .login100-form-title {
   font-size: 30px;
   color: #fff;
