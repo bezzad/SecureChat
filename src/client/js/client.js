@@ -125,8 +125,16 @@ socket.on('reject', data => {
 socket.on('receive', data => {
 	if (currentChatName == data.to)  // from current chat
 		appendMessage(data);
-	else // keep in buffer for other time view
+	else {
+		// keep in buffer for other time view
 		data.state = "replies";
+		//
+		// increase badge
+		var badge = $(`#${data.to}`).find(".badge");
+		var badgeVal = badge.attr("data-badge");
+		if (badgeVal == "") badgeVal = 0;
+		badge.attr("data-badge", parseInt(badgeVal) + 1);
+	}
 
 	getMessages(data.to).push(data);
 });
@@ -166,7 +174,7 @@ function getUserLink(user, chat) {
 				<img src='${user.avatar}' />
 				<div class='wait'></div>
 				<div class='meta'>
-					<p class='name'>${user.username}</p>
+					<p class='name badge' data-badge=''>${user.username}</p>
 				</div>
 			</div>`;
 }
@@ -177,7 +185,7 @@ function getChannelLink(room) {
 				<img src='img/channel.png' />
 				<div class='wait'></div>
 				<div class='meta'>
-					<p class='name'>${room.name}</p>
+					<p class='name badge' data-badge=''>${room.name}</p>
 				</div>
 			</div>`;
 }
@@ -232,11 +240,12 @@ function setConnectionStatus(state) {
 	}
 }
 
-function chatStarted(room) {
-	currentChatName = room;
+function chatStarted(channel) {
+	currentChatName = channel;
 	$("li").removeClass("active");
-	var contact = $(`#${room}`);
+	var contact = $(`#${channel}`);
 	contact.addClass("active");
+	contact.find(".badge").attr("data-badge", ""); // remove badge
 	$("#channel-profile-img").attr("src", contact.find("img").attr("src"))
 	$("#channel-profile-name").html(contact.find(".name").html())
 	contact.find(".wait").css("display", "none");
@@ -350,7 +359,7 @@ function createChannel(channel, p2p) {
 
 	/*==================================================================
 	[ Submit login div ]*/
-	$("#loginButton").on('click', () => {	
+	$("#loginButton").on('click', () => {
 
 		var name = $.trim($("#yourName").val());
 		if (name.length < 1) {

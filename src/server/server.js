@@ -92,6 +92,13 @@ function updateAllUsers() {
     chat.sockets.in(globalRoom).emit("update", { users: manager.getUsers(), rooms: manager.getRooms() });
 }
 
+function createChannel(name, user, p2p) {
+    var channel = { name: name, p2p: p2p, adminUserId: user.id, status: "online", users: [user.id] };
+    manager.rooms[name] = channel;
+    chat.sockets.connected[user.socketid].join(name); // add admin to self chat room
+    return channel;
+}
+
 function defineSocketChannels(socket) {
 
     // Somebody left the chat
@@ -169,22 +176,19 @@ function defineSocketChannels(socket) {
 
         // if users authenticated 
         if (from != null && to != null) {
-            var room = manager.rooms[data.room];
+            var channel = manager.rooms[data.room];
 
-            if (room == null) {
-
-                // new p2p room
-                room = { name: data.room, p2p: true, adminUserId: from.id, users: [from.id] };
-                manager.rooms[data.room] = room;
-                chat.sockets.connected[from.socketid].join(room.name); // add admin to self chat room
+            if (channel == null) {
+                // new p2p channel
+                channel = createChannel(data.room, from, true)
             }
             //
             // add new user to this room
-            room.users.push(to.id);
-            chat.sockets.connected[to.socketid].join(room.name); // add new user to chat room
-        
+            channel.users.push(to.id);
+            chat.sockets.connected[to.socketid].join(channel.name); // add new user to chat room
+
             // send accept msg to user which requested to chat
-            socket.to(to.socketid).emit("accept", { from: from.id, room: room.name, p2p: room.p2p, chatKey: data.chatKey })
+            socket.to(to.socketid).emit("accept", { from: from.id, room: channel.name, p2p: channel.p2p, chatKey: data.chatKey })
         }
     });
 
@@ -199,9 +203,8 @@ function defineSocketChannels(socket) {
             return;
         }
 
-        channel = { name: name, p2p: false, adminUserId: from.id, status: "online", users: [from.id] };
-        manager.rooms[name] = channel;
-        socket.join(name);
+        // create new channel
+        channel = createChannel(name, from, false);
         updateAllUsers();
 
         console.info(`Channel <${channel.name}> created by user <${from.username}: ${channel.adminUserId}>`)

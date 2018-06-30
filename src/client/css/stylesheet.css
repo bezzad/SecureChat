@@ -820,11 +820,15 @@ body, html {
 }
 
 .name {
-    -webkit-user-select: none;  /* Chrome all / Safari all */
-    -moz-user-select: none;     /* Firefox all */
-    -ms-user-select: none;      /* IE 10+ */
-    user-select: none;          /* Likely future */      
-  }
+    -webkit-user-select: none;
+    /* Chrome all / Safari all */
+    -moz-user-select: none;
+    /* Firefox all */
+    -ms-user-select: none;
+    /* IE 10+ */
+    user-select: none;
+    /* Likely future */
+}
 
 .wait {
     position: absolute;
@@ -842,4 +846,29 @@ body, html {
 p>b {
     color: #cccccc;
     font-weight: 600;
+}
+
+.badge {
+    position: relative;
+}
+
+.badge[data-badge]:after {
+    content: attr(data-badge);
+    position: absolute;
+    margin-left: 10px;
+    font-size: .7em;
+    background: rgba(22, 120, 110, .85);
+    color: white;
+    width: 18px;
+    height: 18px;
+    text-align: center;
+    line-height: 18px;
+    border-radius: 50%;
+    box-shadow: 0 0 1px #333;
+}
+
+/* hide empty badge */
+
+.badge[data-badge=""]:after {
+    content: none;
 }
