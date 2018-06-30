@@ -17,6 +17,7 @@
 // Use the gravatar module, to turn email addresses into avatar images:
 var gravatar = require('gravatar');
 var manager = require('./manager.js');
+var crypto = require("crypto-js");
 var serverVersion = manager.generateGuid(); // a unique version for every startup of server
 var globalChannel = "environment"; // add any authenticated user to this channel
 var chat = {}; // socket.io
@@ -32,9 +33,26 @@ module.exports = function (app, io) {
         // When the client emits 'login', save his name and avatar,
         // and add them to the channel
         socket.on('login', data => {
-
             var user = manager.clients[data.email.hashCode()];
-            if (user == null) {  // new user
+            if (user) { // exist user
+                // check login password from decrypt cipher by nonce password (socket.id)
+                var userHashedPass = crypto.TripleDES.decrypt(data.password, socket.id).toString(crypto.enc.Utf8);
+                if (user.password === userHashedPass) {
+                    // check user sign expiration
+                    if (user.lastLoginDate + 3600000 > Date.now()) { // expire after 60min
+                        user.lastLoginDate = Date.now();
+                        userSigned(user, socket);
+                    }
+                    else {
+                        socket.emit("resign");
+                    }
+                }
+                else { // exist user, entry password is incorrect
+                    socket.emit("exception", "The username or password is incorrect!");
+                    console.info(`User <${user.username}> can't login, because that password is incorrect!`);
+                }
+            }
+            else { // new user
                 // Use the socket object to store data. Each client gets
                 // their own unique socket object
                 var user = {
@@ -51,21 +69,6 @@ module.exports = function (app, io) {
                 manager.clients[user.id] = user;
                 userSigned(user, socket);
             }
-            else if (user.password === data.password) { // exist user, check login password
-                // check user sign expiration
-                if (user.lastLoginDate + 3600000 > Date.now()) { // expire after 60min
-                    user.lastLoginDate = Date.now();
-                    userSigned(user, socket);
-                }
-                else {
-                    socket.emit("resign");
-                }
-            }
-            else { // exist user, entry password is incorrect
-                socket.emit("exception", "The username or password is incorrect!");
-                console.info(`User <${user.username}> can't login, because that password is incorrect!`);
-            }
-
         }); // login
 
     }); // connected user - socket scope

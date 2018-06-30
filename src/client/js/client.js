@@ -15,7 +15,12 @@ var socket = io(), // connect to the socket
 socket.on("connect", () => {
 	console.log(`connected by socket.id: ${socket.id}`)
 	setConnectionStatus("connected");
-	if (getMe()) socket.emit('login', getMe());
+	var me = getMe();
+	if (me) {
+		// nonce password by socket.id
+		me.password = me.password.symEncrypt(socket.id);
+		socket.emit('login', me);
+	}
 });
 
 // when me sign-in was expired from server time
