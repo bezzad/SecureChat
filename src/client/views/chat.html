@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+
+<!-- 	
+	This file is rendered by express.js, when the home url of the chat is opened in a browser.
+	It includes jQuery, socket.io.js (it is automatically served by the socket.io library), 
+	and a few more JavaScript files that you should check out.
+-->
+
+<html>
+
+<head>
+	<title>Secure Chat</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<link rel="icon" href="img/favicon.ico">
+	<!--===============================================================================================-->
+	<!-- meyer-reset CSS -->
+	<link rel='stylesheet' type='text/css' href='css/reset.min.css'>
+	<!-- font-awesome CSS -->
+	<link rel='stylesheet' type='text/css' href='css/font-awesome.min.css'>
+	<!-- Login form CSS -->
+	<link rel="stylesheet" type="text/css" href="css/login.css">
+	<!-- Core CSS -->
+	<link rel='stylesheet' type='text/css' href='css/stylesheet.css'>
+	<!--===============================================================================================-->
+</head>
+
+<body>
+	<!-- Login Section -->
+	<div class="limiter">
+		<div class="container-login100">
+			<div class="wrap-login100">
+				<div id="loginForm" class="login100-form validate-form">
+					<span class="login100-form-logo">
+						<img id="yourAvatar" src="img/unnamed.png">
+					</span>
+
+					<span class="login100-form-title">Register</span>
+
+					<div class="wrap-input100 validate-input" data-validate="Enter username">
+						<input id="yourName" class="input100" type="text" name="username" placeholder="Username">
+						<span class="focus-input100"></span>
+					</div>
+
+					<div class="wrap-input100 validate-input" data-validate="Enter email">
+						<input id="yourEmail" class="input100" type="email" name="email" placeholder="Email">
+						<span class="focus-input100"></span>
+					</div>
+
+					<div class="wrap-input100 validate-input" data-validate="Enter password">
+						<input id="yourPass" class="input100" type="password" name="pass" placeholder="Password">
+						<span class="focus-input100"></span>
+					</div>
+
+					<div class="container-login100-form-btn">
+						<button id="loginButton" class="login100-form-btn">
+							Login
+						</button>
+					</div>
+
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- .Login Section -->
+
+	<!-- Chat Section -->
+	<div id="frame" style="display: none;">
+		<div id="sidepanel">
+			<div id="profile">
+				<div class="wrap">
+					<img id="profile-img" src="img/unnamed.png" class="online" />
+					<p id="myUsername">My Name</p>
+					<i class="fa fa-chevron-down expand-button" aria-hidden="true"></i>
+					<div id="expanded">
+						<label for="email">
+							<i class="fa fa-at" aria-hidden="true"></i>
+						</label>
+						<input id="myEmail" name="email" type="text" value="email@provider.com" />
+					</div>
+				</div>
+			</div>
+			<div id="search">
+				<label for="">
+					<i class="fa fa-search" aria-hidden="true"></i>
+				</label>
+				<input type="text" placeholder="Search contacts...">
+			</div>
+			<div id="contacts">
+				<ul id="userContacts"></ul>
+				<ul id="channelContacts"></ul>
+			</div>
+			<div id="bottom-bar">
+				<button id="addchannel">
+					<i class="fa fa-group fa-fw" aria-hidden="true"></i>
+					<span>Add Channel</span>
+				</button>
+				<button id="settings">
+					<i class="fa fa-cog fa-fw" aria-hidden="true"></i>
+					<span>Settings</span>
+				</button>
+			</div>
+		</div>
+		<div class="content">
+			<div class="contact-profile">
+				<img id="channel-profile-img" src="img/unnamed.png" />
+				<p id="channel-profile-name">...</p>
+			</div>
+			<div class="messages">
+				<ul></ul>
+			</div>
+			<div class="message-input">
+				<div class="wrap">
+					<input type="text" placeholder="Write your message..." />
+					<i class="fa fa-paperclip attachment" aria-hidden="true"></i>
+					<button class="submit">
+						<i class="fa fa-paper-plane" aria-hidden="true"></i>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- .Chat Section -->
+
+
+	<!--===============================================================================================-->
+	<!-- jQuery Js -->
+	<script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
+	<!-- Socket.io Js -->
+	<script type="text/javascript" src="js/socket.io.js"></script>
+	<!-- Crypto Js for AES and Hash -->
+	<script type="text/javascript" src="js/crypto-js/crypto-js.js"></script>
+	<!-- JSEncrypt for RSA  -->
+	<script type="text/javascript" src="js/jsencrypt.min.js"></script>
+	<!-- Client Cryptology Lib Js -->
+	<script type="text/javascript" src="js/crypto.js"></script>
+	<!-- Client core Js -->
+	<script type="text/javascript" src="js/client.js"></script>
+	<!--===============================================================================================-->
+</body>
+
+</html>
