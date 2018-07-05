@@ -101,7 +101,7 @@ function userSigned(user, socket) {
     }
 
     updateAllUsers();
-    defineSocketChannels(socket);
+    defineSocketEvents(socket);
 
     console.info(`User <${user.username}> by socket <${user.socketid}> connected`)
 } // signed-in
@@ -118,7 +118,7 @@ function createChannel(name, user, p2p) {
     return channel;
 }
 
-function defineSocketChannels(socket) {
+function defineSocketEvents(socket) {
 
     // Somebody left the chat
     socket.on('disconnect', () => {
@@ -247,17 +247,26 @@ function defineSocketChannels(socket) {
     });
 
     // Handle the request of users for chat
-    socket.on("fetch-messages", data => {
+    socket.on("fetch-messages", channelName => {
         // find fetcher user
         var fetcher = socket.user || manager.findUser(socket.id);
 
-        var channel = manager.channels[data];
+        var channel = manager.channels[channelName];
 
         // check fetcher was a user of channel
         if (fetcher != null && channel != null && channel.users.indexOf(fetcher.id) !== -1)
             socket.emit("fetch-messages", { channel: channel.name, messages: manager.messages[channel.name] });
         else
-            socket.emit("exception", `you are not joined in <${data}> channel or maybe the server was lost your data!!!`);
+            socket.emit("exception", `you are not joined in <${channelName}> channel or maybe the server was lost your data!!!`);
     });
 
-} // defineSocketChannels
+    socket.on("typing", channelName => {
+        var user = socket.user || manager.findUser(socket.id);
+        var channel = manager.channels[channelName];
+
+        if (user && channel && channel.users.indexOf(user.id) !== -1) {
+            chat.sockets.in(channel.name).emit("typing", { channel: channel.name, user: user.id });
+        }
+    });
+
+} // defineSocketEvents
