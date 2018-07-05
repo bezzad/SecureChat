@@ -9,6 +9,7 @@ var socket = io(), // connect to the socket
 	channelMessages = {},
 	channels = null,
 	state = ["offline", "online"], // 0: offline, 1: online
+	lstTypingUser = {},
 	keys = getCipherKeys();
 
 // on connection to server get the id of person's channel
@@ -163,16 +164,64 @@ socket.on('fetch-messages', data => {
 	updateMessages();
 });
 
-socket.on('error', function () {
+socket.on('error', () => {
 	console.log("Client: error");
 	socket.socket.reconnect();
 });
+
+
+// on a user typing in a associated chat with me 
+socket.on("typing", data => {
+	var user = lstUsers[data.user];
+	var channel = getChannels()[data.channel];
+	if (channel && user && channel.name === currentChannelName) {
+		lstTypingUser[user.username] = Date.now();
+		updateTypingUsers(channel);
+		var timeout = 10000; // 10sec
+		setTimeout(() => {
+			for (var u in lstTypingUser)
+				if (lstTypingUser[u] + timeout - 2000 < Date.now()) {
+					// clear old typing state users
+					delete lstTypingUser[u];
+				}
+
+			updateTypingUsers(channel);
+		}, timeout);
+	}
+});
+
 //
 //
 // 
 // ------------------------------------ utilitie functions -------------------------------------
 // 
 //
+function updateTypingUsers(channel) {
+	var typingSpan = $("#channel-user-typing");
+
+	if (Object.keys(lstTypingUser).length > 0) {
+		if (channel.p2p)
+			typingSpan.html(`is typing...`);
+		else {
+			var names = Object.getOwnPropertyNames(lstTypingUser);
+			var usernames = names.slice(0, 3).join(", ");
+			if (names.length > 3)
+				usernames += " and others are";
+			else if (names.length <= 1)
+				usernames += " is";
+			else
+				usernames += " are";
+
+			typingSpan.html(`${usernames} typing...`);
+		}
+
+		typingSpan.css("display", "flex");
+	}
+	else {
+		typingSpan.css("display", "none");
+	}
+}
+
 function reqChatBy(name) {
 	$(`#${name}`).find(".wait").css("display", "block");
 	var channel = getChannels()[name];
@@ -396,6 +445,10 @@ function getNoncePassword(pass) {
 	});
 
 	$(window).on('keydown', function (e) {
+		// notify user is typing...
+		if (currentChannelName != null && currentChannelName.length > 0)
+			socket.emit("typing", currentChannelName)
+
 		if (e.which == 13) {
 			newMessage();
 		}

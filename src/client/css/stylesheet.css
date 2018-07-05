@@ -872,3 +872,12 @@ p>b {
 .badge[data-badge=""]:after {
     content: none;
 }
+
+/* is typing... */
+
+#channel-user-typing {
+    padding-left: 8px;
+    color: gray;
+    font-size: 8pt;
+    display: none;
+}
