@@ -12,7 +12,7 @@
     "chat",
     "system"
   ],
-  "author": "Elham Estedlali <e.estedlali@gmail.com>",
+  "author": "Behzad Khosravifar <behzad.khosravifar@gmail.com>",
   "license": "GNU",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.1.0",
